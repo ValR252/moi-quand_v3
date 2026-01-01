@@ -3,14 +3,18 @@
 /**
  * Page de réservation publique
  * Frontend Developer: Formulaire de réservation avec animations
+ * Backend Engineer: Données de démo en fallback
  */
 
-import { useEffect, useState } from 'react'
+import { use, useEffect, useState } from 'react'
 import { supabase, type Therapist, type Session } from '@/lib/supabase'
+import { MOCK_THERAPIST, MOCK_SESSIONS } from '@/lib/mock-data'
 import { format, addDays, startOfWeek, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
-export default function BookingPage({ params }: { params: { id: string } }) {
+export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
+  // Next.js 15: params est maintenant une Promise, il faut la unwrapper
+  const { id } = use(params)
   const [therapist, setTherapist] = useState<Therapist | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,33 +29,60 @@ export default function BookingPage({ params }: { params: { id: string } }) {
   })
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
+  const [isDemoMode, setIsDemoMode] = useState(false)
 
   useEffect(() => {
     loadTherapistData()
-  }, [params.id])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
 
   async function loadTherapistData() {
-    const { data: therapistData } = await supabase
-      .from('therapists')
-      .select('*')
-      .eq('id', params.id)
-      .single()
+    try {
+      // Si l'ID est "demo", utiliser directement les données de démo
+      if (id === 'demo') {
+        setIsDemoMode(true)
+        setTherapist(MOCK_THERAPIST as any)
+        setSessions(MOCK_SESSIONS as any)
+        setLoading(false)
+        return
+      }
 
-    if (therapistData) {
-      setTherapist(therapistData)
+      const { data: therapistData } = await supabase
+        .from('therapists')
+        .select('*')
+        .eq('id', id)
+        .single()
+
+      if (therapistData) {
+        setTherapist(therapistData)
+      } else {
+        // Fallback vers données de démo si thérapeute non trouvé
+        setIsDemoMode(true)
+        setTherapist(MOCK_THERAPIST as any)
+      }
+
+      const { data: sessionsData } = await supabase
+        .from('sessions')
+        .select('*')
+        .eq('therapist_id', id)
+        .eq('enabled', true)
+
+      if (sessionsData && sessionsData.length > 0) {
+        setSessions(sessionsData)
+      } else {
+        // Fallback vers sessions de démo
+        setSessions(MOCK_SESSIONS as any)
+      }
+
+      setLoading(false)
+    } catch (error) {
+      // En cas d'erreur Supabase, utiliser les données de démo
+      console.warn('Supabase error, using demo data:', error)
+      setIsDemoMode(true)
+      setTherapist(MOCK_THERAPIST as any)
+      setSessions(MOCK_SESSIONS as any)
+      setLoading(false)
     }
-
-    const { data: sessionsData } = await supabase
-      .from('sessions')
-      .select('*')
-      .eq('therapist_id', params.id)
-      .eq('enabled', true)
-
-    if (sessionsData) {
-      setSessions(sessionsData)
-    }
-
-    setLoading(false)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -64,8 +95,17 @@ export default function BookingPage({ params }: { params: { id: string } }) {
 
     setSubmitting(true)
 
+    // En mode démo, simuler la réservation sans toucher à Supabase
+    if (isDemoMode) {
+      setTimeout(() => {
+        setSuccess(true)
+        setSubmitting(false)
+      }, 1000)
+      return
+    }
+
     const { error } = await supabase.from('bookings').insert({
-      therapist_id: params.id,
+      therapist_id: id,
       session_id: selectedSession.id,
       first_name: formData.firstName,
       last_name: formData.lastName,
@@ -113,10 +153,18 @@ export default function BookingPage({ params }: { params: { id: string } }) {
       <div className="min-h-screen bg-gradient-animated flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 text-center animate-[scaleIn_0.5s_ease-out]">
           <div className="text-6xl mb-4">✅</div>
-          <h2 className="text-2xl font-bold mb-4">Réservation confirmée !</h2>
-          <p className="text-gray-600 dark:text-gray-400 mb-6">
-            Vous recevrez un email de confirmation à <strong>{formData.email}</strong> avec les instructions de paiement.
-          </p>
+          <h2 className="text-2xl font-bold mb-4">
+            {isDemoMode ? 'Réservation simulée !' : 'Réservation confirmée !'}
+          </h2>
+          {isDemoMode ? (
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              🎭 <strong>Mode Démo</strong> - Dans la version réelle, vous recevriez un email de confirmation à <strong>{formData.email}</strong> avec les instructions de paiement.
+            </p>
+          ) : (
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Vous recevrez un email de confirmation à <strong>{formData.email}</strong> avec les instructions de paiement.
+            </p>
+          )}
           <div className="bg-indigo-50 dark:bg-indigo-950 rounded-xl p-4 mb-6">
             <p className="text-sm text-gray-700 dark:text-gray-300">
               <strong>Paiement :</strong> Virement bancaire<br />
@@ -146,6 +194,15 @@ export default function BookingPage({ params }: { params: { id: string } }) {
   return (
     <div className="min-h-screen bg-gradient-animated py-12 px-4">
       <div className="max-w-4xl mx-auto">
+        {/* Mode démo banner */}
+        {isDemoMode && (
+          <div className="bg-amber-100 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 rounded-xl p-4 mb-6 text-center">
+            <div className="text-amber-800 dark:text-amber-200">
+              🎭 <strong>Mode Démo</strong> - Ceci est un exemple avec des données fictives. Aucune vraie réservation ne sera créée.
+            </div>
+          </div>
+        )}
+
         {/* Header du thérapeute */}
         <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 mb-8 animate-[fadeIn_0.5s_ease-out]">
           <div className="flex items-center gap-6">

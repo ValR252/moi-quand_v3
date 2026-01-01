@@ -3,10 +3,12 @@
 /**
  * Dashboard thérapeute - Version lean
  * Frontend Developer: Liste des RDV avec animations fluides
+ * Backend Engineer: Données de démo en fallback
  */
 
 import { useEffect, useState } from 'react'
 import { supabase, type Booking, type Therapist } from '@/lib/supabase'
+import { MOCK_THERAPIST, MOCK_BOOKINGS } from '@/lib/mock-data'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
 
@@ -14,21 +16,37 @@ export default function DashboardPage() {
   const [therapist, setTherapist] = useState<Therapist | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
+  const [isDemoMode, setIsDemoMode] = useState(false)
 
   useEffect(() => {
     checkAuth()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function checkAuth() {
-    const { data: { user } } = await supabase.auth.getUser()
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
 
-    if (!user) {
-      window.location.href = '/login'
-      return
+      if (!user) {
+        // Mode démo : pas d'utilisateur connecté
+        loadDemoData()
+        return
+      }
+
+      await loadTherapistData(user.id)
+      await loadBookings(user.id)
+    } catch (error) {
+      // Fallback en mode démo si Supabase ne répond pas
+      console.warn('Supabase error, using demo data:', error)
+      loadDemoData()
     }
+  }
 
-    await loadTherapistData(user.id)
-    await loadBookings(user.id)
+  function loadDemoData() {
+    setIsDemoMode(true)
+    setTherapist(MOCK_THERAPIST as any)
+    setBookings(MOCK_BOOKINGS as any)
+    setLoading(false)
   }
 
   async function loadTherapistData(userId: string) {
@@ -40,6 +58,10 @@ export default function DashboardPage() {
 
     if (data) {
       setTherapist(data)
+    } else {
+      // Fallback vers données de démo si pas de thérapeute trouvé
+      loadDemoData()
+      return
     }
     setLoading(false)
   }
@@ -58,6 +80,10 @@ export default function DashboardPage() {
   }
 
   async function handleLogout() {
+    if (isDemoMode) {
+      window.location.href = '/'
+      return
+    }
     await supabase.auth.signOut()
     window.location.href = '/'
   }
@@ -89,6 +115,15 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gradient-animated">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Mode démo banner */}
+        {isDemoMode && (
+          <div className="bg-amber-100 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 rounded-xl p-4 mb-6 text-center">
+            <div className="text-amber-800 dark:text-amber-200">
+              🎭 <strong>Mode Démo</strong> - Ceci est un exemple avec des données fictives
+            </div>
+          </div>
+        )}
+
         {/* Header avec animation fade-in */}
         <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-6 mb-6 animate-[fadeIn_0.5s_ease-out]">
           <div className="flex items-center justify-between flex-wrap gap-4">
