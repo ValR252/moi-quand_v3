@@ -219,7 +219,6 @@ export async function disconnectGoogleCalendar(therapistId: string) {
       google_access_token: null,
       google_refresh_token: null,
       google_token_expiry: null,
-      google_calendar_event_ids: null,
       google_calendar_id: null
     })
     .eq('id', therapistId)
@@ -232,6 +231,7 @@ export async function disconnectGoogleCalendar(therapistId: string) {
     throw error
   }
 
+  console.log('Google Calendar disconnected successfully')
   return data
 }
 
