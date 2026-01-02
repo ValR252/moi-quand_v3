@@ -138,7 +138,10 @@ export default function DashboardPage() {
     try {
       const response = await fetch('/api/calendar/disconnect', { method: 'POST' })
       if (response.ok) {
-        setHasGoogleCalendar(false)
+        // Reload therapist data to get fresh state from database
+        if (therapist) {
+          await loadTherapistData(therapist.id)
+        }
         alert('Google Calendar déconnecté avec succès ✓')
       }
     } catch (error) {
