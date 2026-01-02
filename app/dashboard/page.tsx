@@ -7,7 +7,7 @@
  */
 
 import { useEffect, useState } from 'react'
-import { supabase, type Booking, type Therapist } from '@/lib/supabase'
+import { type Booking, type Therapist } from '@/lib/supabase'
 import { MOCK_THERAPIST, MOCK_BOOKINGS } from '@/lib/mock-data'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -27,19 +27,21 @@ export default function DashboardPage() {
 
   async function checkAuth() {
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      // Use API route to check auth (uses SSR cookies)
+      const response = await fetch('/api/test-auth')
+      const authData = await response.json()
 
-      if (!user) {
+      if (!authData.authenticated || !authData.user) {
         // Mode démo : pas d'utilisateur connecté
         loadDemoData()
         return
       }
 
-      await loadTherapistData(user.id)
-      await loadBookings(user.id)
+      await loadTherapistData(authData.user.id)
+      await loadBookings(authData.user.id)
     } catch (error) {
-      // Fallback en mode démo si Supabase ne répond pas
-      console.warn('Supabase error, using demo data:', error)
+      // Fallback en mode démo si erreur
+      console.warn('Auth check error, using demo data:', error)
       loadDemoData()
     }
   }
@@ -52,34 +54,37 @@ export default function DashboardPage() {
   }
 
   async function loadTherapistData(userId: string) {
-    const { data } = await supabase
-      .from('therapists')
-      .select('*')
-      .eq('id', userId)
-      .single()
-
-    if (data) {
-      setTherapist(data)
-      // Check if Google Calendar is connected
-      setHasGoogleCalendar(!!data.google_access_token)
-    } else {
-      // Fallback vers données de démo si pas de thérapeute trouvé
+    try {
+      const response = await fetch(`/api/therapist/${userId}`)
+      if (!response.ok) {
+        loadDemoData()
+        return
+      }
+      
+      const data = await response.json()
+      if (data.therapist) {
+        setTherapist(data.therapist)
+        setHasGoogleCalendar(!!data.therapist.google_access_token)
+      } else {
+        loadDemoData()
+        return
+      }
+      setLoading(false)
+    } catch (error) {
+      console.warn('Error loading therapist:', error)
       loadDemoData()
-      return
     }
-    setLoading(false)
   }
 
   async function loadBookings(userId: string) {
-    const { data } = await supabase
-      .from('bookings')
-      .select('*')
-      .eq('therapist_id', userId)
-      .order('date', { ascending: true })
-      .order('time', { ascending: true })
-
-    if (data) {
-      setBookings(data)
+    try {
+      const response = await fetch(`/api/bookings?therapist_id=${userId}`)
+      if (response.ok) {
+        const data = await response.json()
+        setBookings(data.bookings || [])
+      }
+    } catch (error) {
+      console.warn('Error loading bookings:', error)
     }
   }
 
@@ -88,7 +93,8 @@ export default function DashboardPage() {
       window.location.href = '/'
       return
     }
-    await supabase.auth.signOut()
+    
+    await fetch('/api/auth/logout', { method: 'POST' })
     window.location.href = '/'
   }
 
@@ -100,7 +106,6 @@ export default function DashboardPage() {
       // Vérifier le status de la réponse
       if (response.status === 401) {
         alert('❌ Session expirée. Veuillez vous reconnecter.')
-        await supabase.auth.signOut()
         window.location.href = '/login'
         return
       }
