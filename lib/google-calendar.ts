@@ -144,7 +144,7 @@ Booking ID: ${booking.id}
   }
 
   const response = await calendar.events.insert({
-    calendarId: 'primary',
+    calendarId: await getSelectedCalendarId(therapistId),
     requestBody: event,
     sendUpdates: 'all' // Send email to attendee
   })
@@ -168,7 +168,7 @@ export async function updateCalendarEvent(
   const endDateTime = new Date(startDateTime.getTime() + (updates.duration || 60) * 60000)
 
   await calendar.events.patch({
-    calendarId: 'primary',
+    calendarId: await getSelectedCalendarId(therapistId),
     eventId,
     requestBody: {
       start: {
@@ -192,7 +192,7 @@ export async function deleteCalendarEvent(
   const calendar = await getCalendarClient(therapistId)
 
   await calendar.events.delete({
-    calendarId: 'primary',
+    calendarId: await getSelectedCalendarId(therapistId),
     eventId,
     sendUpdates: 'all'
   })
@@ -218,8 +218,44 @@ export async function disconnectGoogleCalendar(therapistId: string) {
       google_refresh_token: null,
       google_token_expiry: null,
       google_calendar_event_ids: null
-    })
+      google_calendar_id: null,    })
     .eq('id', therapistId)
 
   if (error) throw error
+}
+
+// List all calendars available to the therapist
+export async function listCalendars(therapistId: string) {
+  const calendar = await getCalendarClient(therapistId)
+  
+  const response = await calendar.calendarList.list()
+  
+  return response.data.items?.map(cal => ({
+    id: cal.id,
+    summary: cal.summary,
+    description: cal.description,
+    primary: cal.primary,
+    backgroundColor: cal.backgroundColor
+  })) || []
+}
+
+// Save selected calendar ID for a therapist
+export async function saveSelectedCalendar(therapistId: string, calendarId: string) {
+  const { error } = await supabase
+    .from('therapists')
+    .update({ google_calendar_id: calendarId })
+    .eq('id', therapistId)
+  
+  if (error) throw error
+}
+
+// Get the selected calendar ID for a therapist
+export async function getSelectedCalendarId(therapistId: string): Promise<string> {
+  const { data } = await supabase
+    .from('therapists')
+    .select('google_calendar_id')
+    .eq('id', therapistId)
+    .single()
+  
+  return data?.google_calendar_id || 'primary'
 }

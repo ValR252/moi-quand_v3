@@ -29,10 +29,10 @@ export async function GET(request: NextRequest) {
     await saveTokensForTherapist(state, tokens)
 
     // Redirect back to dashboard with success
+    // Redirect to dashboard with calendar selection modal
     return NextResponse.redirect(
-      new URL('/dashboard?calendar_success=true', request.url)
-    )
-  } catch (error) {
+      new URL('/dashboard?calendar_success=true&show_calendar_selector=true', request.url)
+    )  } catch (error) {
     console.error('Error in calendar callback:', error)
     return NextResponse.redirect(
       new URL('/dashboard?calendar_error=unknown', request.url)
