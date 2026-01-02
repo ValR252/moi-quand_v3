@@ -1,6 +1,12 @@
 'use client'
 
+/**
+ * Page de connexion thérapeute
+ * Frontend Developer: Authentification avec animations
+ */
+
 import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -14,27 +20,48 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
 
-    try {
-      const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/signup'
-
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+    if (mode === 'login') {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       })
 
-      const data = await response.json()
-
-      if (!response.ok) {
-        setError(data.error || 'Une erreur est survenue')
+      if (error) {
+        setError(error.message)
         setLoading(false)
         return
       }
 
       window.location.href = '/dashboard'
-    } catch (err) {
-      setError('Erreur de connexion au serveur')
-      setLoading(false)
+    } else {
+      // Inscription
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email,
+        password,
+      })
+
+      if (authError) {
+        setError(authError.message)
+        setLoading(false)
+        return
+      }
+
+      if (authData.user) {
+        // Créer le profil thérapeute
+        const { error: profileError } = await supabase.from('therapists').insert({
+          id: authData.user.id,
+          email: authData.user.email!,
+          name: email.split('@')[0], // Nom par défaut à partir de l'email
+        })
+
+        if (profileError) {
+          setError('Erreur lors de la création du profil')
+          setLoading(false)
+          return
+        }
+
+        window.location.href = '/dashboard'
+      }
     }
   }
 
