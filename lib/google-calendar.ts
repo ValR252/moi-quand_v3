@@ -218,7 +218,8 @@ export async function disconnectGoogleCalendar(therapistId: string) {
       google_refresh_token: null,
       google_token_expiry: null,
       google_calendar_event_ids: null,
-      google_calendar_id: null,    })
+      google_calendar_id: null
+    })
     .eq('id', therapistId)
 
   if (error) throw error
