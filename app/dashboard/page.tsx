@@ -11,6 +11,8 @@ import { type Booking, type Therapist } from '@/lib/supabase'
 import { MOCK_THERAPIST, MOCK_BOOKINGS } from '@/lib/mock-data'
 import { format, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import CalendarSelector from '@/app/components/CalendarSelector'
+import { useSearchParams } from 'next/navigation'
 
 export default function DashboardPage() {
   const [therapist, setTherapist] = useState<Therapist | null>(null)
@@ -19,9 +21,16 @@ export default function DashboardPage() {
   const [isDemoMode, setIsDemoMode] = useState(false)
   const [hasGoogleCalendar, setHasGoogleCalendar] = useState(false)
   const [calendarLoading, setCalendarLoading] = useState(false)
+  const [showCalendarSelector, setShowCalendarSelector] = useState(false)
+  const searchParams = useSearchParams()
 
   useEffect(() => {
     checkAuth()
+
+    // Check if we should show calendar selector from URL param
+    if (searchParams.get('show_calendar_selector') === 'true') {
+      setShowCalendarSelector(true)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -322,13 +331,21 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
-                <button
-                  onClick={handleDisconnectGoogleCalendar}
-                  disabled={calendarLoading}
-                  className="px-4 py-2 border border-red-300 text-red-600 rounded-xl hover:bg-red-50 dark:hover:bg-red-950 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {calendarLoading ? '⏳ Déconnexion...' : '🔌 Déconnecter Google Calendar'}
-                </button>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCalendarSelector(true)}
+                    className="px-4 py-2 border border-indigo-300 text-indigo-600 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950 transition-all hover:scale-105 active:scale-95"
+                  >
+                    📅 Changer d'agenda
+                  </button>
+                  <button
+                    onClick={handleDisconnectGoogleCalendar}
+                    disabled={calendarLoading}
+                    className="px-4 py-2 border border-red-300 text-red-600 rounded-xl hover:bg-red-50 dark:hover:bg-red-950 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {calendarLoading ? '⏳ Déconnexion...' : '🔌 Déconnecter Google Calendar'}
+                  </button>
+                </div>
               </div>
             ) : (
               <div>
@@ -476,6 +493,21 @@ export default function DashboardPage() {
           </details>
         )}
       </div>
+
+      {/* Calendar Selector Modal */}
+      {showCalendarSelector && (
+        <CalendarSelector
+          onSelect={(calendarId) => {
+            console.log('Calendar selected:', calendarId)
+            setShowCalendarSelector(false)
+            // Reload therapist data to get updated calendar selection
+            if (therapist) {
+              loadTherapistData(therapist.id)
+            }
+          }}
+          onClose={() => setShowCalendarSelector(false)}
+        />
+      )}
 
       <style jsx>{`
         @keyframes fadeIn {
