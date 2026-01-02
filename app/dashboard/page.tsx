@@ -17,6 +17,8 @@ export default function DashboardPage() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
   const [isDemoMode, setIsDemoMode] = useState(false)
+  const [hasGoogleCalendar, setHasGoogleCalendar] = useState(false)
+  const [calendarLoading, setCalendarLoading] = useState(false)
 
   useEffect(() => {
     checkAuth()
@@ -58,6 +60,8 @@ export default function DashboardPage() {
 
     if (data) {
       setTherapist(data)
+      // Check if Google Calendar is connected
+      setHasGoogleCalendar(!!data.google_access_token)
     } else {
       // Fallback vers données de démo si pas de thérapeute trouvé
       loadDemoData()
@@ -86,6 +90,81 @@ export default function DashboardPage() {
     }
     await supabase.auth.signOut()
     window.location.href = '/'
+  }
+
+  async function handleConnectGoogleCalendar() {
+    setCalendarLoading(true)
+    try {
+      const response = await fetch('/api/calendar/connect')
+
+      // Vérifier le status de la réponse
+      if (response.status === 401) {
+        alert('❌ Session expirée. Veuillez vous reconnecter.')
+        await supabase.auth.signOut()
+        window.location.href = '/login'
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        alert(`❌ Erreur ${response.status}: ${errorData.error || 'Erreur inconnue'}`)
+        setCalendarLoading(false)
+        return
+      }
+
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert('❌ Aucune URL de connexion reçue')
+        setCalendarLoading(false)
+      }
+    } catch (error) {
+      console.error('Error connecting calendar:', error)
+      alert('Erreur lors de la connexion à Google Calendar. Vérifiez la console (F12).')
+      setCalendarLoading(false)
+    }
+  }
+
+  async function handleDisconnectGoogleCalendar() {
+    if (!confirm('Êtes-vous sûr de vouloir déconnecter Google Calendar ?')) return
+
+    setCalendarLoading(true)
+    try {
+      const response = await fetch('/api/calendar/disconnect', { method: 'POST' })
+      if (response.ok) {
+        setHasGoogleCalendar(false)
+        alert('Google Calendar déconnecté avec succès ✓')
+      }
+    } catch (error) {
+      console.error('Error disconnecting calendar:', error)
+      alert('Erreur lors de la déconnexion')
+    }
+    setCalendarLoading(false)
+  }
+
+  async function handleSyncBooking(bookingId: string) {
+    try {
+      const response = await fetch('/api/calendar/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId })
+      })
+
+      if (response.ok) {
+        alert('Réservation synchronisée avec Google Calendar ✓')
+        // Refresh bookings to get updated google_event_id
+        if (therapist) {
+          await loadBookings(therapist.id)
+        }
+      } else {
+        const error = await response.json()
+        alert(`Erreur: ${error.error}`)
+      }
+    } catch (error) {
+      console.error('Error syncing booking:', error)
+      alert('Erreur lors de la synchronisation')
+    }
   }
 
   if (loading) {
@@ -200,6 +279,59 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {/* Google Calendar Integration */}
+        {therapist && !isDemoMode && (
+          <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-6 mb-6 animate-[fadeIn_0.65s_ease-out]">
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              📅 Synchronisation Google Calendar
+            </h2>
+
+            {hasGoogleCalendar ? (
+              <div>
+                <div className="flex items-center gap-3 mb-4 p-4 bg-green-50 dark:bg-green-950 border border-green-200 dark:border-green-800 rounded-xl">
+                  <div className="text-3xl">✅</div>
+                  <div className="flex-1">
+                    <div className="font-medium text-green-800 dark:text-green-200">
+                      Google Calendar connecté
+                    </div>
+                    <div className="text-sm text-green-600 dark:text-green-400">
+                      Vos nouvelles réservations seront automatiquement ajoutées à votre calendrier Google
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDisconnectGoogleCalendar}
+                  disabled={calendarLoading}
+                  className="px-4 py-2 border border-red-300 text-red-600 rounded-xl hover:bg-red-50 dark:hover:bg-red-950 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {calendarLoading ? '⏳ Déconnexion...' : '🔌 Déconnecter Google Calendar'}
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="flex items-center gap-3 mb-4 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl">
+                  <div className="text-3xl">📆</div>
+                  <div className="flex-1">
+                    <div className="font-medium text-blue-800 dark:text-blue-200">
+                      Connectez votre Google Calendar
+                    </div>
+                    <div className="text-sm text-blue-600 dark:text-blue-400">
+                      Synchronisez automatiquement vos réservations avec votre calendrier Google
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={handleConnectGoogleCalendar}
+                  disabled={calendarLoading}
+                  className="px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+                >
+                  {calendarLoading ? '⏳ Connexion...' : '🔗 Connecter Google Calendar'}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Stats rapides avec animations décalées */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
           <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-6 hover:shadow-2xl transition-all animate-[fadeIn_0.7s_ease-out]">
@@ -256,7 +388,7 @@ export default function DashboardPage() {
                         )}
                       </div>
                     </div>
-                    <div className="text-right">
+                    <div className="text-right space-y-2">
                       <span
                         className={`inline-block px-4 py-2 rounded-full text-sm font-medium transition-all ${
                           booking.payment_status === 'paid'
@@ -266,6 +398,22 @@ export default function DashboardPage() {
                       >
                         {booking.payment_status === 'paid' ? '✓ Payé' : '⏳ En attente'}
                       </span>
+                      {hasGoogleCalendar && !isDemoMode && (
+                        <div>
+                          {(booking as any).google_event_id ? (
+                            <div className="text-xs text-green-600 dark:text-green-400 flex items-center justify-end gap-1">
+                              <span>📅</span> Synchronisé
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => handleSyncBooking(booking.id)}
+                              className="text-xs px-3 py-1 bg-indigo-100 text-indigo-600 dark:bg-indigo-900 dark:text-indigo-200 rounded-lg hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-all"
+                            >
+                              📅 Sync Calendar
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>

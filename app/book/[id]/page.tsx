@@ -104,20 +104,24 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       return
     }
 
-    const { error } = await supabase.from('bookings').insert({
-      therapist_id: id,
-      session_id: selectedSession.id,
-      first_name: formData.firstName,
-      last_name: formData.lastName,
-      email: formData.email,
-      phone: formData.phone,
-      date: format(selectedDate, 'yyyy-MM-dd'),
-      time: selectedTime,
-      payment_status: 'pending',
+    // Create booking via API (with auto Google Calendar sync)
+    const response = await fetch('/api/bookings/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        therapist_id: id,
+        session_id: selectedSession.id,
+        first_name: formData.firstName,
+        last_name: formData.lastName,
+        email: formData.email,
+        phone: formData.phone,
+        date: format(selectedDate, 'yyyy-MM-dd'),
+        time: selectedTime,
+      })
     })
 
-    if (error) {
-      console.error('Erreur:', error)
+    if (!response.ok) {
+      console.error('Erreur:', await response.json())
       alert('Erreur lors de la réservation. Veuillez réessayer.')
       setSubmitting(false)
       return

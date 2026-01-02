@@ -24,6 +24,9 @@ export type Therapist = {
   bio: string | null
   iban: string | null
   created_at: string
+  google_access_token?: string | null
+  google_refresh_token?: string | null
+  google_token_expiry?: string | null
 }
 
 export type Session = {
@@ -65,4 +68,5 @@ export type Booking = {
   time: string
   payment_status: 'pending' | 'paid'
   created_at: string
+  google_event_id?: string | null
 }
