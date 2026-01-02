@@ -211,7 +211,9 @@ export async function hasGoogleCalendarConnected(therapistId: string): Promise<b
 
 // Disconnect Google Calendar for a therapist
 export async function disconnectGoogleCalendar(therapistId: string) {
-  const { error } = await supabase
+  console.log('disconnectGoogleCalendar called with therapistId:', therapistId)
+
+  const { data, error } = await supabase
     .from('therapists')
     .update({
       google_access_token: null,
@@ -221,8 +223,16 @@ export async function disconnectGoogleCalendar(therapistId: string) {
       google_calendar_id: null
     })
     .eq('id', therapistId)
+    .select()
 
-  if (error) throw error
+  console.log('Supabase update result:', { data, error })
+
+  if (error) {
+    console.error('Supabase error in disconnectGoogleCalendar:', error)
+    throw error
+  }
+
+  return data
 }
 
 // List all calendars available to the therapist
