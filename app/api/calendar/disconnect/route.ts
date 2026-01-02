@@ -36,7 +36,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Disconnect Google Calendar
+    console.log('Disconnecting Google Calendar for user:', user.id)
     await disconnectGoogleCalendar(user.id)
+    console.log('Google Calendar disconnected successfully')
 
     return NextResponse.json({ success: true })
   } catch (error) {

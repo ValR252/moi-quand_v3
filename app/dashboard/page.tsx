@@ -55,13 +55,19 @@ export default function DashboardPage() {
 
   async function loadTherapistData(userId: string) {
     try {
-      const response = await fetch(`/api/therapist/${userId}`)
+      // Add cache-busting parameter to force fresh data
+      const response = await fetch(`/api/therapist/${userId}?t=${Date.now()}`)
       if (!response.ok) {
         loadDemoData()
         return
       }
-      
+
       const data = await response.json()
+      console.log('Therapist data loaded:', {
+        hasToken: !!data.therapist?.google_access_token,
+        therapist: data.therapist
+      })
+
       if (data.therapist) {
         setTherapist(data.therapist)
         setHasGoogleCalendar(!!data.therapist.google_access_token)
@@ -136,13 +142,22 @@ export default function DashboardPage() {
 
     setCalendarLoading(true)
     try {
+      console.log('Disconnecting Google Calendar...')
       const response = await fetch('/api/calendar/disconnect', { method: 'POST' })
+      console.log('Disconnect response:', response.status, response.ok)
+
       if (response.ok) {
+        console.log('Disconnect successful, reloading therapist data...')
         // Reload therapist data to get fresh state from database
         if (therapist) {
           await loadTherapistData(therapist.id)
+          console.log('State after reload - hasGoogleCalendar:', hasGoogleCalendar)
         }
         alert('Google Calendar déconnecté avec succès ✓')
+      } else {
+        const errorData = await response.json()
+        console.error('Disconnect failed:', errorData)
+        alert('Erreur lors de la déconnexion')
       }
     } catch (error) {
       console.error('Error disconnecting calendar:', error)
