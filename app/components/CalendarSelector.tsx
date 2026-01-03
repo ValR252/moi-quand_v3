@@ -31,10 +31,16 @@ export default function CalendarSelector({ onSelect, onClose }: Props) {
         const data = await response.json()
         setCalendars(data.calendars || [])
 
-        // Pre-select primary calendar
-        const primary = data.calendars?.find((c: Calendar) => c.primary)
-        if (primary) {
-          setSelectedId(primary.id)
+        // Pre-select the currently selected calendar from database
+        if (data.selectedCalendarId) {
+          setSelectedId(data.selectedCalendarId)
+          console.log('Currently selected calendar:', data.selectedCalendarId)
+        } else {
+          // Fallback to primary calendar if none selected
+          const primary = data.calendars?.find((c: Calendar) => c.primary)
+          if (primary) {
+            setSelectedId(primary.id)
+          }
         }
       }
     } catch (error) {
