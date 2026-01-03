@@ -6,7 +6,7 @@
  * Backend Engineer: Données de démo en fallback
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { type Booking, type Therapist } from '@/lib/supabase'
 import { MOCK_THERAPIST, MOCK_BOOKINGS } from '@/lib/mock-data'
 import { format, parseISO } from 'date-fns'
@@ -14,7 +14,7 @@ import { fr } from 'date-fns/locale'
 import CalendarSelector from '@/app/components/CalendarSelector'
 import { useSearchParams } from 'next/navigation'
 
-export default function DashboardPage() {
+function DashboardContent() {
   const [therapist, setTherapist] = useState<Therapist | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [loading, setLoading] = useState(true)
@@ -522,5 +522,20 @@ export default function DashboardPage() {
         }
       `}</style>
     </div>
+  )
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-animated flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent"></div>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement...</p>
+        </div>
+      </div>
+    }>
+      <DashboardContent />
+    </Suspense>
   )
 }
