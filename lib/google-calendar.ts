@@ -256,8 +256,59 @@ export async function saveSelectedCalendar(therapistId: string, calendarId: stri
     .from('therapists')
     .update({ google_calendar_id: calendarId })
     .eq('id', therapistId)
-  
+
   if (error) throw error
+}
+
+/**
+ * Get busy times from Google Calendar for a date range
+ * Uses the freebusy API to check when the therapist is occupied
+ *
+ * @param therapistId - The therapist's user ID
+ * @param startDate - Start date in YYYY-MM-DD format
+ * @param endDate - End date in YYYY-MM-DD format
+ * @returns Array of busy time ranges with ISO datetime strings
+ */
+export async function getGoogleCalendarBusyTimes(
+  therapistId: string,
+  startDate: string,
+  endDate: string
+): Promise<Array<{ start: string; end: string }>> {
+  try {
+    console.log(`Fetching Google Calendar busy times for ${therapistId} from ${startDate} to ${endDate}`)
+
+    const calendar = await getCalendarClient(therapistId)
+    const calendarId = await getSelectedCalendarId(therapistId)
+
+    // Create ISO datetime strings for the start and end of the date range
+    const timeMin = new Date(`${startDate}T00:00:00`).toISOString()
+    const timeMax = new Date(`${endDate}T23:59:59`).toISOString()
+
+    console.log(`Querying freebusy API with timeMin=${timeMin}, timeMax=${timeMax}, calendarId=${calendarId}`)
+
+    const response = await calendar.freebusy.query({
+      requestBody: {
+        timeMin,
+        timeMax,
+        timeZone: 'Europe/Zurich',
+        items: [{ id: calendarId }]
+      }
+    })
+
+    const busyTimes = response.data.calendars?.[calendarId]?.busy || []
+
+    console.log(`Found ${busyTimes.length} busy periods in Google Calendar`)
+
+    return busyTimes.map(busy => ({
+      start: busy.start!,
+      end: busy.end!
+    }))
+  } catch (error) {
+    console.error('Error fetching Google Calendar busy times:', error)
+    // Fail gracefully - return empty array so booking system continues to work
+    // even if Google Calendar is temporarily unavailable
+    return []
+  }
 }
 
 // Get the selected calendar ID for a therapist

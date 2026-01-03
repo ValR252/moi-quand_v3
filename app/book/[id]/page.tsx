@@ -21,6 +21,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [selectedSession, setSelectedSession] = useState<Session | null>(null)
   const [selectedDate, setSelectedDate] = useState<Date | null>(null)
   const [selectedTime, setSelectedTime] = useState<string | null>(null)
+  const [availableTimes, setAvailableTimes] = useState<string[]>([])
+  const [loadingSlots, setLoadingSlots] = useState(false)
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -35,6 +37,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     loadTherapistData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  // Fetch available slots when date or session changes
+  useEffect(() => {
+    if (selectedDate && selectedSession && therapist && !isDemoMode) {
+      fetchAvailableSlots()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDate, selectedSession])
 
   async function loadTherapistData() {
     try {
@@ -83,6 +93,39 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       setSessions(MOCK_SESSIONS as any)
       setLoading(false)
     }
+  }
+
+  async function fetchAvailableSlots() {
+    if (!selectedDate || !selectedSession || !therapist) return
+
+    setLoadingSlots(true)
+    setAvailableTimes([])
+    setSelectedTime(null) // Reset selected time when date changes
+
+    try {
+      const dateStr = format(selectedDate, 'yyyy-MM-dd')
+      const duration = selectedSession.duration
+
+      console.log(`Fetching available slots for ${dateStr} (${duration}min session)`)
+
+      const response = await fetch(
+        `/api/availability/${therapist.id}?date=${dateStr}&duration=${duration}`
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        console.log(`Received ${data.count} available slots:`, data.availableSlots)
+        setAvailableTimes(data.availableSlots || [])
+      } else {
+        console.error('Failed to fetch availability:', response.status)
+        setAvailableTimes([])
+      }
+    } catch (error) {
+      console.error('Error fetching availability:', error)
+      setAvailableTimes([])
+    }
+
+    setLoadingSlots(false)
   }
 
   async function handleSubmit(e: React.FormEvent) {
@@ -189,11 +232,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   // Générer les 14 prochains jours
   const availableDates = Array.from({ length: 14 }, (_, i) => addDays(new Date(), i))
 
-  // Horaires disponibles (simplifiés pour la démo - devrait venir de la DB)
-  const availableTimes = [
+  // Horaires de démonstration (seulement pour mode démo)
+  const demoTimes = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
     '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
   ]
+
+  // Utiliser les créneaux de démo ou les créneaux réels selon le mode
+  const displayTimes = isDemoMode ? demoTimes : availableTimes
 
   return (
     <div className="min-h-screen bg-gradient-animated py-12 px-4">
@@ -305,22 +351,36 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm">3</span>
                 Choisissez un horaire
               </h2>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                {availableTimes.map((time) => (
-                  <button
-                    key={time}
-                    type="button"
-                    onClick={() => setSelectedTime(time)}
-                    className={`p-3 rounded-xl border-2 font-medium transition-all hover:scale-105 active:scale-95 ${
-                      selectedTime === time
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 shadow-lg'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
-                    }`}
-                  >
-                    {time}
-                  </button>
-                ))}
-              </div>
+
+              {loadingSlots ? (
+                <div className="text-center py-12">
+                  <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent"></div>
+                  <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement des créneaux disponibles...</p>
+                </div>
+              ) : displayTimes.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <div className="text-6xl mb-4">📭</div>
+                  <p className="text-lg font-medium">Aucun créneau disponible ce jour-là</p>
+                  <p className="text-sm mt-2">Essayez un autre jour ou une autre durée de session</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {displayTimes.map((time) => (
+                    <button
+                      key={time}
+                      type="button"
+                      onClick={() => setSelectedTime(time)}
+                      className={`p-3 rounded-xl border-2 font-medium transition-all hover:scale-105 active:scale-95 ${
+                        selectedTime === time
+                          ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 shadow-lg'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
+                      }`}
+                    >
+                      {time}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
