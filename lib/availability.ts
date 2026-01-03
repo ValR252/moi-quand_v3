@@ -163,11 +163,11 @@ function removeConflictingSlots(
  */
 async function getScheduleForDay(therapistId: string, dayOfWeek: number) {
   const { data } = await supabase
-    .from('schedule')
+    .from('schedules')
     .select('*')
     .eq('therapist_id', therapistId)
     .eq('day_of_week', dayOfWeek)
-    .eq('enabled', true)
+    .eq('is_available', true)
 
   return data || []
 }
