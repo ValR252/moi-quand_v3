@@ -131,7 +131,7 @@ export default function AvailabilityPage() {
     if (!confirm('Supprimer cette période de congé ?')) return
 
     try {
-      const res = await fetch(`/api/holidays?id=${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/holidays/${id}`, { method: 'DELETE' })
       if (res.ok) {
         await loadData()
       }
