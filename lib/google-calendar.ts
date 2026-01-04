@@ -22,6 +22,7 @@ export function getAuthUrl(therapistId: string) {
 
   return oauth2Client.generateAuthUrl({
     access_type: 'offline', // Get refresh token
+    prompt: 'consent', // Force consent screen to get refresh_token even if already authorized
     scope: [
       'https://www.googleapis.com/auth/calendar',
       'https://www.googleapis.com/auth/calendar.events'
