@@ -368,68 +368,6 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* Google Calendar */}
-          {therapist && (
-            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                Google Calendar
-              </h2>
-
-              <div className="flex items-center justify-between">
-                <div className="flex-1">
-                  {therapist.google_refresh_token ? (
-                    <>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="success">Connecté</Badge>
-                        {therapist.google_calendar_id && (
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {therapist.google_calendar_id}
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Vos événements Google Calendar bloquent automatiquement les créneaux
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge variant="neutral">Non connecté</Badge>
-                      </div>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Connectez votre calendrier pour synchroniser vos disponibilités
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                <div className="flex gap-2">
-                  {therapist.google_refresh_token ? (
-                    <a
-                      href="/api/calendar/disconnect"
-                      className="px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors text-sm font-medium"
-                      onClick={(e) => {
-                        if (!confirm('Voulez-vous vraiment déconnecter Google Calendar ?')) {
-                          e.preventDefault()
-                        }
-                      }}
-                    >
-                      Déconnecter
-                    </a>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={handleConnectGoogleCalendar}
-                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer"
-                    >
-                      Connecter Google Calendar
-                    </button>
-                  )}
-                </div>
-              </div>
-            </section>
-          )}
-
           {/* Save Button */}
           <div className="flex justify-end">
             <button
@@ -441,6 +379,68 @@ export default function ProfilePage() {
             </button>
           </div>
         </form>
+
+        {/* Google Calendar - Outside form to prevent submission issues */}
+        {therapist && (
+          <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              Google Calendar
+            </h2>
+
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                {therapist.google_refresh_token ? (
+                  <>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="success">Connecté</Badge>
+                      {therapist.google_calendar_id && (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          {therapist.google_calendar_id}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Vos événements Google Calendar bloquent automatiquement les créneaux
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge variant="neutral">Non connecté</Badge>
+                    </div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Connectez votre calendrier pour synchroniser vos disponibilités
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div className="flex gap-2">
+                {therapist.google_refresh_token ? (
+                  <a
+                    href="/api/calendar/disconnect"
+                    className="px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors text-sm font-medium"
+                    onClick={(e) => {
+                      if (!confirm('Voulez-vous vraiment déconnecter Google Calendar ?')) {
+                        e.preventDefault()
+                      }
+                    }}
+                  >
+                    Déconnecter
+                  </a>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleConnectGoogleCalendar}
+                    className="px-4 py-2 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer"
+                  >
+                    Connecter Google Calendar
+                  </button>
+                )}
+              </div>
+            </div>
+          </section>
+        )}
       </div>
     </DashboardLayout>
   )
