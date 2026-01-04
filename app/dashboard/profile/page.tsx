@@ -389,12 +389,12 @@ export default function ProfilePage() {
                       Déconnecter
                     </a>
                   ) : (
-                    <a
-                      href="/api/calendar/connect"
-                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors text-sm font-medium"
+                    <button
+                      onClick={() => window.location.href = '/api/calendar/connect'}
+                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer"
                     >
                       Connecter Google Calendar
-                    </a>
+                    </button>
                   )}
                 </div>
               </div>
