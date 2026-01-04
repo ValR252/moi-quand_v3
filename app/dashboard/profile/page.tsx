@@ -33,6 +33,16 @@ export default function ProfilePage() {
 
   useEffect(() => {
     loadProfile()
+
+    // Check for calendar success and reload if present
+    const urlParams = new URLSearchParams(window.location.search)
+    if (urlParams.get('calendar_success') === 'true') {
+      console.log('Calendar connected successfully! Reloading profile...')
+      // Wait a bit for Supabase to finish saving, then reload
+      setTimeout(() => {
+        loadProfile()
+      }, 1000)
+    }
   }, [])
 
   async function loadProfile() {
