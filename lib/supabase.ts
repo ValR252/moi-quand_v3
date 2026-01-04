@@ -27,24 +27,50 @@ export type Therapist = {
   google_access_token?: string | null
   google_refresh_token?: string | null
   google_token_expiry?: string | null
+  google_calendar_id?: string | null
+  // Phase 2: New profile fields
+  phone?: string | null
+  address?: string | null
+  city?: string | null
+  postal_code?: string | null
+  country?: string | null
+  website?: string | null
+  // Phase 2: Configuration
+  booking_enabled?: boolean
+  auto_confirm?: boolean
+  notice_hours?: number
+  // Phase 2: JSONB fields
+  custom_form?: Record<string, any> | null
+  payment_config?: Record<string, any> | null
+  email_templates?: Record<string, any> | null
+  updated_at?: string
 }
 
 export type Session = {
   id: string
   therapist_id: string
+  name?: string
   label: string
   duration: number
   price: number
   enabled: boolean
   created_at: string
+  // Phase 2: New fields
+  description?: string | null
+  color?: string
+  max_per_day?: number | null
+  display_order?: number
 }
 
 export type Schedule = {
+  id: string
   therapist_id: string
   day_of_week: number // 0-6
   start_time: string // "09:00"
   end_time: string // "17:00"
-  enabled: boolean
+  is_available: boolean
+  created_at?: string
+  updated_at?: string
 }
 
 export type Holiday = {
@@ -52,7 +78,7 @@ export type Holiday = {
   therapist_id: string
   start_date: string
   end_date: string
-  label: string | null
+  reason?: string | null
   created_at: string
 }
 
@@ -60,13 +86,29 @@ export type Booking = {
   id: string
   therapist_id: string
   session_id: string | null
+  client_name?: string
   first_name: string
   last_name: string
   email: string
   phone: string | null
   date: string
   time: string
-  payment_status: 'pending' | 'paid'
+  duration?: number
   created_at: string
   google_event_id?: string | null
+  // Phase 2: Payment tracking
+  payment_status?: 'pending' | 'paid' | 'cancelled'
+  payment_method?: string | null
+  payment_date?: string | null
+  // Phase 2: Communication tracking
+  reminder_sent?: boolean
+  confirmation_sent?: boolean
+  // Phase 2: Custom form data
+  form_data?: Record<string, any> | null
+  // Phase 2: Therapist notes
+  therapist_notes?: string | null
+  // Phase 2: Booking lifecycle
+  status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
+  cancellation_reason?: string | null
+  cancelled_at?: string | null
 }
