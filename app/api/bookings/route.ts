@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { getAuthenticatedUserId } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -32,8 +32,7 @@ export async function GET(request: NextRequest) {
     }
 
     // For authenticated dashboard
-    const cookieStore = await cookies()
-    const authTherapistId = cookieStore.get('therapist_id')?.value
+    const authTherapistId = await getAuthenticatedUserId()
 
     if (!authTherapistId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

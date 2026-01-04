@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { cookies } from 'next/headers'
+import { getAuthenticatedUserId } from '@/lib/auth'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -17,8 +17,7 @@ export async function PATCH(
 ) {
   try {
     const { id } = await context.params
-    const cookieStore = await cookies()
-    const therapistId = cookieStore.get('therapist_id')?.value
+    const therapistId = await getAuthenticatedUserId()
 
     if (!therapistId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -67,8 +66,7 @@ export async function DELETE(
 ) {
   try {
     const { id } = await context.params
-    const cookieStore = await cookies()
-    const therapistId = cookieStore.get('therapist_id')?.value
+    const therapistId = await getAuthenticatedUserId()
 
     if (!therapistId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
