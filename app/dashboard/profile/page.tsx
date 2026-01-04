@@ -391,7 +391,12 @@ export default function ProfilePage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={() => window.location.href = '/api/calendar/connect'}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        console.log('Connect button clicked, navigating to /api/calendar/connect')
+                        window.location.href = '/api/calendar/connect'
+                      }}
                       className="px-4 py-2 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer"
                     >
                       Connecter Google Calendar

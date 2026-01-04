@@ -6,6 +6,8 @@ import { cookies } from 'next/headers'
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('=== Google Calendar Connect Called ===')
+
     // Get authenticated user from Supabase
     const cookieStore = await cookies()
 
@@ -28,7 +30,10 @@ export async function GET(request: NextRequest) {
 
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
+    console.log('Auth check:', { hasUser: !!user, error: authError?.message })
+
     if (authError || !user) {
+      console.log('Auth failed, returning 401')
       return NextResponse.json(
         { error: 'Not authenticated' },
         { status: 401 }
@@ -37,6 +42,8 @@ export async function GET(request: NextRequest) {
 
     // Generate OAuth URL with therapist ID as state
     const authUrl = getAuthUrl(user.id)
+
+    console.log('Generated auth URL, redirecting to:', authUrl)
 
     // Redirect to Google OAuth page
     return NextResponse.redirect(authUrl)
