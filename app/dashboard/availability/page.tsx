@@ -1,6 +1,6 @@
 /**
  * Availability Management Page
- * Manages weekly schedules, holidays, and notice period
+ * Manages weekly schedules with multiple time slots per day, holidays, and notice period
  */
 
 'use client'
@@ -8,7 +8,6 @@
 import { useEffect, useState } from 'react'
 import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import Modal, { ModalActions } from '@/components/ui/Modal'
-import Toggle from '@/components/ui/Toggle'
 import { Schedule, Holiday } from '@/lib/supabase'
 import { format } from 'date-fns'
 import { fr } from 'date-fns/locale'
@@ -20,20 +19,21 @@ export default function AvailabilityPage() {
   const [holidays, setHolidays] = useState<Holiday[]>([])
   const [noticeHours, setNoticeHours] = useState(2)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+
+  // Day editor state
+  const [editingDay, setEditingDay] = useState<number | null>(null)
+  const [newSlot, setNewSlot] = useState({
+    start_time: '09:00',
+    end_time: '17:00',
+  })
+
+  // Holiday modal state
   const [isHolidayModalOpen, setIsHolidayModalOpen] = useState(false)
   const [holidayForm, setHolidayForm] = useState({
     start_date: '',
     end_date: '',
     reason: '',
-  })
-  const [saving, setSaving] = useState(false)
-
-  // Day editor state
-  const [editingDay, setEditingDay] = useState<number | null>(null)
-  const [dayForm, setDayForm] = useState({
-    start_time: '09:00',
-    end_time: '17:00',
-    is_available: true,
   })
 
   useEffect(() => {
@@ -59,27 +59,13 @@ export default function AvailabilityPage() {
     }
   }
 
-  function openDayEditor(day: number) {
-    const existing = schedules.find((s) => s.day_of_week === day)
-
-    if (existing) {
-      setDayForm({
-        start_time: existing.start_time,
-        end_time: existing.end_time,
-        is_available: existing.is_available,
-      })
-    } else {
-      setDayForm({
-        start_time: '09:00',
-        end_time: '17:00',
-        is_available: false,
-      })
-    }
-
-    setEditingDay(day)
+  function getDaySchedules(day: number): Schedule[] {
+    return schedules
+      .filter((s) => s.day_of_week === day)
+      .sort((a, b) => a.start_time.localeCompare(b.start_time))
   }
 
-  async function saveDaySchedule() {
+  async function addTimeSlot() {
     if (editingDay === null) return
 
     setSaving(true)
@@ -90,18 +76,32 @@ export default function AvailabilityPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           day_of_week: editingDay,
-          ...dayForm,
+          start_time: newSlot.start_time,
+          end_time: newSlot.end_time,
         }),
       })
 
       if (res.ok) {
         await loadData()
-        setEditingDay(null)
+        setNewSlot({ start_time: '09:00', end_time: '17:00' })
       }
     } catch (error) {
-      console.error('Error saving schedule:', error)
+      console.error('Error adding time slot:', error)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function deleteTimeSlot(id: string) {
+    if (!confirm('Supprimer ce créneau ?')) return
+
+    try {
+      const res = await fetch(`/api/schedules/${id}`, { method: 'DELETE' })
+      if (res.ok) {
+        await loadData()
+      }
+    } catch (error) {
+      console.error('Error deleting time slot:', error)
     }
   }
 
@@ -147,18 +147,25 @@ export default function AvailabilityPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ notice_hours: noticeHours }),
       })
+      alert('Délai de préavis enregistré')
     } catch (error) {
       console.error('Error saving notice hours:', error)
     }
   }
 
-  function getScheduleForDay(day: number) {
-    return schedules.find((s) => s.day_of_week === day)
+  if (loading) {
+    return (
+      <DashboardLayout>
+        <div className="text-center py-12">
+          <div className="inline-block w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+        </div>
+      </DashboardLayout>
+    )
   }
 
   return (
     <DashboardLayout>
-      <div className="max-w-5xl">
+      <div className="max-w-4xl">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
           Disponibilités
         </h1>
@@ -168,44 +175,58 @@ export default function AvailabilityPage() {
             <div className="inline-block w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
           </div>
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6">
             {/* Weekly Schedule */}
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
               <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
                 Horaires hebdomadaires
               </h2>
 
-              <div className="space-y-2">
+              <div className="space-y-3">
                 {DAYS.map((dayName, dayIndex) => {
-                  const schedule = getScheduleForDay(dayIndex)
-                  const isAvailable = schedule?.is_available || false
+                  const daySchedules = getDaySchedules(dayIndex)
 
                   return (
                     <div
                       key={dayIndex}
-                      className="flex items-center justify-between p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                      className="flex items-start gap-4 p-4 rounded-lg border border-gray-200 dark:border-gray-700"
                     >
-                      <div className="flex items-center gap-4 flex-1">
-                        <span className="w-24 font-medium text-gray-900 dark:text-gray-100">
-                          {dayName}
-                        </span>
+                      <div className="w-32 font-medium text-gray-900 dark:text-gray-100">
+                        {dayName}
+                      </div>
 
-                        {isAvailable && schedule ? (
-                          <span className="text-gray-600 dark:text-gray-400">
-                            {schedule.start_time} - {schedule.end_time}
-                          </span>
+                      <div className="flex-1">
+                        {daySchedules.length === 0 ? (
+                          <span className="text-gray-500 dark:text-gray-400">Fermé</span>
                         ) : (
-                          <span className="text-gray-400 dark:text-gray-500 italic">
-                            Fermé
-                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {daySchedules.map((schedule) => (
+                              <div
+                                key={schedule.id}
+                                className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 rounded-lg text-sm"
+                              >
+                                <span>
+                                  {schedule.start_time} - {schedule.end_time}
+                                </span>
+                                <button
+                                  onClick={() => deleteTimeSlot(schedule.id)}
+                                  className="text-indigo-400 hover:text-red-600 dark:hover:text-red-400"
+                                >
+                                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                </button>
+                              </div>
+                            ))}
+                          </div>
                         )}
                       </div>
 
                       <button
-                        onClick={() => openDayEditor(dayIndex)}
-                        className="px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-lg transition-colors"
+                        onClick={() => setEditingDay(dayIndex)}
+                        className="px-4 py-2 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-lg transition-colors whitespace-nowrap"
                       >
-                        Modifier
+                        + Ajouter
                       </button>
                     </div>
                   )
@@ -296,51 +317,44 @@ export default function AvailabilityPage() {
           </div>
         )}
 
-        {/* Day Schedule Editor Modal */}
+        {/* Add Time Slot Modal */}
         <Modal
           isOpen={editingDay !== null}
           onClose={() => setEditingDay(null)}
-          title={editingDay !== null ? `Horaires du ${DAYS[editingDay]}` : ''}
+          title={`Ajouter un créneau - ${editingDay !== null ? DAYS[editingDay] : ''}`}
         >
           <div className="space-y-4">
-            <Toggle
-              checked={dayForm.is_available}
-              onChange={(checked) => setDayForm({ ...dayForm, is_available: checked })}
-              label="Ouvert ce jour"
-            />
-
-            {dayForm.is_available && (
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Début
-                  </label>
-                  <input
-                    type="time"
-                    value={dayForm.start_time}
-                    onChange={(e) => setDayForm({ ...dayForm, start_time: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Fin
-                  </label>
-                  <input
-                    type="time"
-                    value={dayForm.end_time}
-                    onChange={(e) => setDayForm({ ...dayForm, end_time: e.target.value })}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
-                  />
-                </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Heure de début
+                </label>
+                <input
+                  type="time"
+                  value={newSlot.start_time}
+                  onChange={(e) => setNewSlot({ ...newSlot, start_time: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
               </div>
-            )}
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Heure de fin
+                </label>
+                <input
+                  type="time"
+                  value={newSlot.end_time}
+                  onChange={(e) => setNewSlot({ ...newSlot, end_time: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100"
+                />
+              </div>
+            </div>
 
             <ModalActions
               onCancel={() => setEditingDay(null)}
-              onConfirm={saveDaySchedule}
+              onConfirm={addTimeSlot}
               isLoading={saving}
+              confirmText="Ajouter"
             />
           </div>
         </Modal>

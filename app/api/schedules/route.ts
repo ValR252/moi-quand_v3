@@ -39,7 +39,7 @@ export async function GET() {
 
 /**
  * POST /api/schedules
- * Creates or updates schedules for a day
+ * Adds a new time slot for a day
  */
 export async function POST(request: NextRequest) {
   try {
@@ -50,35 +50,30 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { day_of_week, start_time, end_time, is_available } = body
+    const { day_of_week, start_time, end_time } = body
 
-    // Delete existing schedules for this day
-    await supabase
-      .from('schedules')
-      .delete()
-      .eq('therapist_id', therapistId)
-      .eq('day_of_week', day_of_week)
-
-    // Insert new schedule if available
-    if (is_available && start_time && end_time) {
-      const { data, error } = await supabase
-        .from('schedules')
-        .insert({
-          therapist_id: therapistId,
-          day_of_week,
-          start_time,
-          end_time,
-          is_available: true,
-        })
-        .select()
-        .single()
-
-      if (error) throw error
-
-      return NextResponse.json({ schedule: data })
+    if (!start_time || !end_time) {
+      return NextResponse.json(
+        { error: 'start_time and end_time are required' },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({ schedule: null })
+    const { data, error } = await supabase
+      .from('schedules')
+      .insert({
+        therapist_id: therapistId,
+        day_of_week,
+        start_time,
+        end_time,
+        is_available: true,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    return NextResponse.json({ schedule: data }, { status: 201 })
   } catch (error) {
     console.error('Error saving schedule:', error)
     return NextResponse.json(
