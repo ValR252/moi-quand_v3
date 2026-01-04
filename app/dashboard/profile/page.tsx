@@ -15,6 +15,7 @@ export default function ProfilePage() {
   const [therapist, setTherapist] = useState<Therapist | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [copied, setCopied] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -88,6 +89,14 @@ export default function ProfilePage() {
     }
   }
 
+  function copyBookingLink() {
+    if (!therapist) return
+    const bookingUrl = `${window.location.origin}/book/${therapist.id}`
+    navigator.clipboard.writeText(bookingUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
   if (loading) {
     return (
       <DashboardLayout>
@@ -98,12 +107,76 @@ export default function ProfilePage() {
     )
   }
 
+  const bookingUrl = therapist ? `${typeof window !== 'undefined' ? window.location.origin : ''}/book/${therapist.id}` : ''
+
   return (
     <DashboardLayout>
       <div className="max-w-3xl">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 mb-6">
           Profil thérapeute
         </h1>
+
+        {/* Booking Link Section */}
+        <section className="bg-gradient-to-br from-brand-50 to-indigo-50 dark:from-brand-950 dark:to-indigo-950 rounded-xl border border-brand-200 dark:border-brand-800 p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="flex-shrink-0 w-12 h-12 bg-brand-500 dark:bg-brand-600 rounded-lg flex items-center justify-center">
+              <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+              </svg>
+            </div>
+
+            <div className="flex-1 min-w-0">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-1">
+                Votre lien de réservation
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                Partagez ce lien avec vos clients pour qu'ils puissent réserver une séance
+              </p>
+
+              <div className="flex items-center gap-2">
+                <div className="flex-1 px-4 py-3 bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 font-mono text-sm text-gray-700 dark:text-gray-300 overflow-x-auto">
+                  {bookingUrl}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={copyBookingLink}
+                  className="flex-shrink-0 px-4 py-3 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors font-medium flex items-center gap-2"
+                >
+                  {copied ? (
+                    <>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Copié!
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Copier
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <div className="mt-4 flex items-center gap-4 text-sm">
+                <a
+                  href={bookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-brand-600 dark:text-brand-400 hover:underline flex items-center gap-1"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                  Voir ma page de réservation
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Personal Info */}
