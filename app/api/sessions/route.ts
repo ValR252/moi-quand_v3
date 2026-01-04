@@ -52,10 +52,15 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const { name, label, duration, price, description, color, max_per_day, display_order } = body
 
+    console.log('Received data:', { name, label, duration, price, description, color, max_per_day, display_order })
+
     // Validation
     if (!name || !duration || price === undefined) {
       return NextResponse.json(
-        { error: 'Missing required fields: name, duration, price' },
+        {
+          error: 'Missing required fields: name, duration, price',
+          received: { name, duration, price }
+        },
         { status: 400 }
       )
     }
