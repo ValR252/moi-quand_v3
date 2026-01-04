@@ -13,6 +13,7 @@
 import { ReactNode, useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import ThemeToggle from '@/components/ThemeToggle'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -144,7 +145,10 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
             </h1>
 
             {/* Right section (notifications, profile, etc.) */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              {/* Theme Toggle */}
+              <ThemeToggle />
+
               {/* Notification bell placeholder */}
               <button className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative">
                 <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">

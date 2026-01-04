@@ -92,3 +92,45 @@
 ::-webkit-scrollbar-thumb:hover {
   @apply bg-gray-400 dark:bg-gray-500;
 }
+
+/* Enhanced focus states for accessibility */
+@layer base {
+  *:focus-visible {
+    @apply outline-none ring-2 ring-brand-500 ring-offset-2 dark:ring-brand-400 dark:ring-offset-gray-900 rounded;
+  }
+
+  /* Smooth color transitions on theme change */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 200ms;
+  }
+
+  /* Disable transitions for animations and transforms to avoid conflicts */
+  *:where([class*="animate-"], [class*="transition-transform"]) {
+    transition-property: none;
+  }
+}
+
+/* Enhanced glassmorphism utilities */
+@layer utilities {
+  .glass {
+    @apply bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl border border-white/20 dark:border-gray-700/50;
+  }
+
+  .glass-hover {
+    @apply hover:bg-white/90 dark:hover:bg-gray-900/80 hover:border-white/30 dark:hover:border-gray-600/50;
+  }
+
+  .elevation-1 {
+    @apply shadow-elevation-1 dark:shadow-elevation-dark-1;
+  }
+
+  .elevation-2 {
+    @apply shadow-elevation-2 dark:shadow-elevation-dark-2;
+  }
+
+  .elevation-3 {
+    @apply shadow-elevation-3 dark:shadow-elevation-dark-3;
+  }
+}
