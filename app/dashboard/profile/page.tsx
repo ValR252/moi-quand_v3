@@ -348,11 +348,16 @@ export default function ProfilePage() {
               </h2>
 
               <div className="flex items-center justify-between">
-                <div>
+                <div className="flex-1">
                   {therapist.google_refresh_token ? (
                     <>
                       <div className="flex items-center gap-2 mb-1">
                         <Badge variant="success">Connecté</Badge>
+                        {therapist.google_calendar_id && (
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            {therapist.google_calendar_id}
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         Vos événements Google Calendar bloquent automatiquement les créneaux
@@ -370,12 +375,28 @@ export default function ProfilePage() {
                   )}
                 </div>
 
-                <a
-                  href="/dashboard"
-                  className="px-4 py-2 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950 rounded-lg transition-colors text-sm font-medium"
-                >
-                  Gérer
-                </a>
+                <div className="flex gap-2">
+                  {therapist.google_refresh_token ? (
+                    <a
+                      href="/api/calendar/disconnect"
+                      className="px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors text-sm font-medium"
+                      onClick={(e) => {
+                        if (!confirm('Voulez-vous vraiment déconnecter Google Calendar ?')) {
+                          e.preventDefault()
+                        }
+                      }}
+                    >
+                      Déconnecter
+                    </a>
+                  ) : (
+                    <a
+                      href="/api/calendar/connect"
+                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      Connecter Google Calendar
+                    </a>
+                  )}
+                </div>
               </div>
             </section>
           )}
