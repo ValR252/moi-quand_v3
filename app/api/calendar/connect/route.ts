@@ -43,10 +43,10 @@ export async function GET(request: NextRequest) {
     // Generate OAuth URL with therapist ID as state
     const authUrl = getAuthUrl(user.id)
 
-    console.log('Generated auth URL, redirecting to:', authUrl)
+    console.log('Generated auth URL:', authUrl)
 
-    // Redirect to Google OAuth page
-    return NextResponse.redirect(authUrl)
+    // Return the URL as JSON for client to handle navigation
+    return NextResponse.json({ url: authUrl })
   } catch (error) {
     console.error('Error generating auth URL:', error)
     return NextResponse.json(

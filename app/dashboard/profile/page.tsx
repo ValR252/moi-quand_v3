@@ -89,6 +89,34 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleConnectGoogleCalendar() {
+    try {
+      const response = await fetch('/api/calendar/connect')
+
+      if (response.status === 401) {
+        alert('❌ Session expirée. Veuillez vous reconnecter.')
+        window.location.href = '/login'
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        alert(`❌ Erreur ${response.status}: ${errorData.error || 'Erreur inconnue'}`)
+        return
+      }
+
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert('❌ Aucune URL de connexion reçue')
+      }
+    } catch (error) {
+      console.error('Error connecting calendar:', error)
+      alert('Erreur lors de la connexion à Google Calendar')
+    }
+  }
+
   function copyBookingLink() {
     if (!therapist) return
     const bookingUrl = `${window.location.origin}/book/${therapist.id}`
@@ -391,12 +419,7 @@ export default function ProfilePage() {
                   ) : (
                     <button
                       type="button"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        e.stopPropagation()
-                        console.log('Connect button clicked, navigating to /api/calendar/connect')
-                        window.location.href = '/api/calendar/connect'
-                      }}
+                      onClick={handleConnectGoogleCalendar}
                       className="px-4 py-2 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors text-sm font-medium cursor-pointer"
                     >
                       Connecter Google Calendar
