@@ -16,6 +16,9 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [showCalendarModal, setShowCalendarModal] = useState(false)
+  const [calendars, setCalendars] = useState<Array<{ id: string; summary: string; primary?: boolean }>>([])
+  const [loadingCalendars, setLoadingCalendars] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -124,6 +127,68 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Error connecting calendar:', error)
       alert('Erreur lors de la connexion à Google Calendar')
+    }
+  }
+
+  async function handleDisconnectGoogleCalendar() {
+    if (!confirm('Voulez-vous vraiment déconnecter Google Calendar ?')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/calendar/disconnect')
+      if (response.ok) {
+        await loadProfile()
+        alert('Google Calendar déconnecté avec succès')
+      } else {
+        alert('Erreur lors de la déconnexion')
+      }
+    } catch (error) {
+      console.error('Error disconnecting calendar:', error)
+      alert('Erreur lors de la déconnexion')
+    }
+  }
+
+  async function handleShowCalendarSelector() {
+    setShowCalendarModal(true)
+    setLoadingCalendars(true)
+
+    try {
+      const response = await fetch('/api/calendar/list')
+      if (response.ok) {
+        const data = await response.json()
+        setCalendars(data.calendars || [])
+      } else {
+        alert('Erreur lors du chargement des calendriers')
+        setShowCalendarModal(false)
+      }
+    } catch (error) {
+      console.error('Error loading calendars:', error)
+      alert('Erreur lors du chargement des calendriers')
+      setShowCalendarModal(false)
+    } finally {
+      setLoadingCalendars(false)
+    }
+  }
+
+  async function handleSelectCalendar(calendarId: string) {
+    try {
+      const response = await fetch('/api/calendar/select', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ calendarId })
+      })
+
+      if (response.ok) {
+        await loadProfile()
+        setShowCalendarModal(false)
+        alert('Calendrier sélectionné avec succès')
+      } else {
+        alert('Erreur lors de la sélection du calendrier')
+      }
+    } catch (error) {
+      console.error('Error selecting calendar:', error)
+      alert('Erreur lors de la sélection')
     }
   }
 
@@ -427,17 +492,22 @@ export default function ProfilePage() {
 
               <div className="flex gap-2">
                 {therapist.google_refresh_token ? (
-                  <a
-                    href="/api/calendar/disconnect"
-                    className="px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors text-sm font-medium"
-                    onClick={(e) => {
-                      if (!confirm('Voulez-vous vraiment déconnecter Google Calendar ?')) {
-                        e.preventDefault()
-                      }
-                    }}
-                  >
-                    Déconnecter
-                  </a>
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleShowCalendarSelector}
+                      className="px-4 py-2 bg-brand-600 hover:bg-brand-700 dark:bg-brand-500 dark:hover:bg-brand-600 text-white rounded-lg transition-colors text-sm font-medium"
+                    >
+                      Changer de calendrier
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDisconnectGoogleCalendar}
+                      className="px-4 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors text-sm font-medium border border-red-300 dark:border-red-700"
+                    >
+                      Déconnecter
+                    </button>
+                  </>
                 ) : (
                   <button
                     type="button"
@@ -450,6 +520,61 @@ export default function ProfilePage() {
               </div>
             </div>
           </section>
+        )}
+
+        {/* Calendar Selector Modal */}
+        {showCalendarModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Sélectionner un calendrier
+              </h3>
+
+              {loadingCalendars ? (
+                <div className="text-center py-8">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-brand-600"></div>
+                  <p className="mt-2 text-gray-600 dark:text-gray-400">Chargement des calendriers...</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-96 overflow-y-auto">
+                  {calendars.map((calendar) => (
+                    <button
+                      key={calendar.id}
+                      onClick={() => handleSelectCalendar(calendar.id!)}
+                      className={`w-full text-left px-4 py-3 rounded-lg border transition-colors ${
+                        calendar.id === therapist?.google_calendar_id
+                          ? 'bg-brand-50 dark:bg-brand-950 border-brand-500 dark:border-brand-600'
+                          : 'bg-gray-50 dark:bg-gray-700 border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium text-gray-900 dark:text-gray-100">
+                            {calendar.summary}
+                          </div>
+                          {calendar.primary && (
+                            <span className="text-xs text-gray-500 dark:text-gray-400">Principal</span>
+                          )}
+                        </div>
+                        {calendar.id === therapist?.google_calendar_id && (
+                          <svg className="w-5 h-5 text-brand-600 dark:text-brand-400" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        )}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <button
+                onClick={() => setShowCalendarModal(false)}
+                className="mt-4 w-full px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                Fermer
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </DashboardLayout>
