@@ -23,6 +23,7 @@ export default function ProfilePage() {
     name: '',
     email: '',
     title: '',
+    slug: '',
     phone: '',
     address: '',
     city: '',
@@ -59,6 +60,7 @@ export default function ProfilePage() {
           name: data.therapist.name || '',
           email: data.therapist.email || '',
           title: data.therapist.title || '',
+          slug: data.therapist.slug || '',
           phone: data.therapist.phone || '',
           address: data.therapist.address || '',
           city: data.therapist.city || '',
@@ -196,7 +198,9 @@ export default function ProfilePage() {
 
   function copyBookingLink() {
     if (!therapist) return
-    const bookingUrl = `${window.location.origin}/book/${therapist.id}`
+    // Use slug if available, otherwise fall back to ID
+    const path = therapist.slug || `book/${therapist.id}`
+    const bookingUrl = `${window.location.origin}/${path}`
     navigator.clipboard.writeText(bookingUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -212,7 +216,9 @@ export default function ProfilePage() {
     )
   }
 
-  const bookingUrl = therapist ? `${typeof window !== 'undefined' ? window.location.origin : ''}/book/${therapist.id}` : ''
+  // Use slug if available, otherwise fall back to ID
+  const path = therapist?.slug || `book/${therapist?.id}`
+  const bookingUrl = therapist ? `${typeof window !== 'undefined' ? window.location.origin : ''}/${path}` : ''
 
   return (
     <DashboardLayout>
@@ -317,6 +323,34 @@ export default function ProfilePage() {
                     placeholder="Ex: Psychothérapeute FSP"
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  URL personnalisée *
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500 dark:text-gray-400">moi-quand.com/</span>
+                  <input
+                    type="text"
+                    value={formData.slug || ''}
+                    onChange={(e) => {
+                      // Auto-format: lowercase, replace spaces with hyphens, remove special chars
+                      const slug = e.target.value
+                        .toLowerCase()
+                        .replace(/\s+/g, '-')
+                        .replace(/[^a-z0-9-]/g, '')
+                      setFormData({ ...formData, slug })
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 font-mono"
+                    placeholder="prenom-nom"
+                    pattern="[a-z0-9-]+"
+                    required
+                  />
+                </div>
+                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                  Seules les lettres minuscules, chiffres et tirets sont autorisés
+                </p>
               </div>
 
               <div>

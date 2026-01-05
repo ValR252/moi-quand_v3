@@ -24,7 +24,16 @@ export default function DashboardPage() {
 
   useEffect(() => {
     loadBookings()
+    markBookingsAsRead()
   }, [])
+
+  async function markBookingsAsRead() {
+    try {
+      await fetch('/api/bookings/mark-read', { method: 'POST' })
+    } catch (error) {
+      console.error('Error marking bookings as read:', error)
+    }
+  }
 
   async function loadBookings() {
     try {
