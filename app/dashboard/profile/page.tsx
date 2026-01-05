@@ -136,7 +136,9 @@ export default function ProfilePage() {
     }
 
     try {
-      const response = await fetch('/api/calendar/disconnect')
+      const response = await fetch('/api/calendar/disconnect', {
+        method: 'POST'
+      })
       if (response.ok) {
         await loadProfile()
         alert('Google Calendar déconnecté avec succès')
