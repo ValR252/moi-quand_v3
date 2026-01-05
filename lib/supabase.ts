@@ -20,6 +20,7 @@ export type Therapist = {
   email: string
   name: string
   title: string | null
+  slug?: string | null
   photo_url: string | null
   bio: string | null
   iban: string | null
@@ -111,4 +112,6 @@ export type Booking = {
   status?: 'pending' | 'confirmed' | 'cancelled' | 'completed'
   cancellation_reason?: string | null
   cancelled_at?: string | null
+  // Notification system
+  viewed_at?: string | null
 }
