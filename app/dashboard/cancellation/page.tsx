@@ -112,8 +112,8 @@ export default function CancellationPage() {
                 </p>
               </div>
               <Toggle
-                enabled={formData.cancellation_enabled}
-                onChange={(enabled) => setFormData({ ...formData, cancellation_enabled: enabled })}
+                checked={formData.cancellation_enabled}
+                onChange={(checked) => setFormData({ ...formData, cancellation_enabled: checked })}
               />
             </div>
           </div>

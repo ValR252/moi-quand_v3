@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { getAuthenticatedUserId } from '@/lib/auth'
 
 // Server-side Supabase client with service role
 const supabase = createClient(
@@ -34,21 +35,10 @@ interface CancellationSettingsInput {
  */
 export async function PATCH(request: NextRequest) {
   try {
-    // Get therapist ID from auth
-    const authHeader = request.headers.get('cookie')
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
-    }
+    // Get authenticated user ID
+    const userId = await getAuthenticatedUserId()
 
-    // Get session from cookie
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
-      authHeader.split('sb-access-token=')[1]?.split(';')[0]
-    )
-
-    if (authError || !user) {
+    if (!userId) {
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
@@ -67,11 +57,11 @@ export async function PATCH(request: NextRequest) {
       )
     }
 
-    // Get therapist by user email
+    // Get therapist by user ID
     const { data: therapist, error: therapistError } = await supabase
       .from('therapists')
       .select('id')
-      .eq('email', user.email)
+      .eq('id', userId)
       .single()
 
     if (therapistError || !therapist) {
