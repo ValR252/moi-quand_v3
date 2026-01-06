@@ -30,6 +30,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/sessions', label: 'Séances', icon: '⏱️' },
   { href: '/dashboard/profile', label: 'Profil', icon: '👤' },
   { href: '/dashboard/availability', label: 'Disponibilités', icon: '🗓️' },
+  { href: '/dashboard/cancellation', label: 'Annulation', icon: '🔄' },
   { href: '/dashboard/form', label: 'Formulaire', icon: '📝' },
   { href: '/dashboard/payments', label: 'Paiements', icon: '💳' },
   { href: '/dashboard/messages', label: 'Messages', icon: '✉️' },

@@ -95,19 +95,30 @@ export default function DashboardPage() {
   }
 
   async function cancelBooking(id: string) {
-    if (!confirm('Annuler ce rendez-vous ?')) return
+    const reason = prompt('Raison de l\'annulation (optionnel) :')
+    if (reason === null) return // User clicked Cancel
 
     try {
-      const res = await fetch(`/api/bookings/${id}`, {
-        method: 'DELETE',
+      const res = await fetch('/api/bookings/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          booking_id: id,
+          reason: reason || undefined
+        }),
       })
 
       if (res.ok) {
         await loadBookings()
         setIsDetailModalOpen(false)
+        alert('Rendez-vous annulé avec succès')
+      } else {
+        const error = await res.json()
+        alert(`Erreur: ${error.error || 'Impossible d\'annuler le rendez-vous'}`)
       }
     } catch (error) {
       console.error('Error cancelling booking:', error)
+      alert('Erreur lors de l\'annulation')
     }
   }
 

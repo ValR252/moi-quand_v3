@@ -2,6 +2,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { autoSyncBooking } from '@/lib/booking-sync'
+import { sendBookingConfirmationEmail } from '@/lib/email'
+import crypto from 'crypto'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -30,6 +32,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Generate unique cancellation token
+    const cancellationToken = crypto.randomBytes(32).toString('hex')
+
     // Create booking in Supabase
     const { data: booking, error } = await supabase
       .from('bookings')
@@ -42,7 +47,8 @@ export async function POST(request: NextRequest) {
         phone,
         date,
         time,
-        payment_status: 'pending'
+        payment_status: 'pending',
+        cancellation_token: cancellationToken
       })
       .select()
       .single()
@@ -55,11 +61,40 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Get therapist and session details for email
+    const { data: therapistData } = await supabase
+      .from('therapists')
+      .select('name, cancellation_deadline_hours')
+      .eq('id', therapist_id)
+      .single()
+
+    const { data: sessionData } = await supabase
+      .from('sessions')
+      .select('label, duration')
+      .eq('id', session_id)
+      .single()
+
     // Auto-sync to Google Calendar (async, don't block response)
     // This will only sync if therapist has Google Calendar connected
     autoSyncBooking(booking.id).catch(err => {
       console.error('Error syncing booking to calendar:', err)
       // Don't fail the booking creation if sync fails
+    })
+
+    // Send confirmation email with cancellation link (async)
+    sendBookingConfirmationEmail({
+      to: email,
+      patientName: `${first_name} ${last_name}`,
+      therapistName: therapistData?.name || 'votre thérapeute',
+      date,
+      time,
+      duration: sessionData?.duration || 60,
+      sessionLabel: sessionData?.label || 'Séance',
+      cancellationToken,
+      cancellationDeadlineHours: therapistData?.cancellation_deadline_hours || 24
+    }).catch(err => {
+      console.error('Error sending confirmation email:', err)
+      // Don't fail the booking creation if email fails
     })
 
     return NextResponse.json({

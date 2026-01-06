@@ -45,6 +45,11 @@ export type Therapist = {
   payment_config?: Record<string, any> | null
   email_templates?: Record<string, any> | null
   updated_at?: string
+  // Cancellation settings
+  cancellation_enabled?: boolean
+  cancellation_policy?: 'refund' | 'transfer' | 'both'
+  cancellation_deadline_hours?: number
+  refund_automatic?: boolean
 }
 
 export type Session = {
@@ -114,4 +119,15 @@ export type Booking = {
   cancelled_at?: string | null
   // Notification system
   viewed_at?: string | null
+  // Cancellation tracking
+  cancelled_by?: 'patient' | 'therapist'
+  cancellation_type?: 'cancel' | 'transfer'
+  cancellation_token?: string | null
+  // Refund tracking
+  refund_status?: 'pending' | 'processed' | 'rejected'
+  refund_amount?: number
+  refund_date?: string | null
+  // Transfer tracking
+  original_booking_id?: string | null
+  transferred_to_booking_id?: string | null
 }
