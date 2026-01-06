@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
     // Check if new slot is available (call availability API)
     const availabilityRes = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/availability/${therapist.id}?date=${body.new_date}&session_id=${session.id}`,
+      `${process.env.NEXT_PUBLIC_APP_URL}/api/availability/${therapist.id}?date=${body.new_date}&duration=${session.duration}`,
       { method: 'GET' }
     )
 
@@ -133,9 +133,9 @@ export async function POST(request: NextRequest) {
     }
 
     const availabilityData = await availabilityRes.json()
-    const requestedSlot = availabilityData.slots?.find((s: any) => s.time === body.new_time)
+    const isSlotAvailable = availabilityData.availableSlots?.includes(body.new_time)
 
-    if (!requestedSlot || !requestedSlot.available) {
+    if (!isSlotAvailable) {
       return NextResponse.json(
         { error: 'Ce créneau n\'est plus disponible' },
         { status: 409 }
