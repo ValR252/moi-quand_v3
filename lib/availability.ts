@@ -202,15 +202,19 @@ async function getBookingsForDate(therapistId: string, date: string) {
     .from('bookings')
     .select(`
       time,
+      cancelled_at,
       sessions (duration)
     `)
     .eq('therapist_id', therapistId)
     .eq('date', date)
 
-  return (data || []).map(b => ({
-    time: b.time,
-    duration: (b.sessions as any)?.duration || 60
-  }))
+  // Filter out cancelled bookings
+  return (data || [])
+    .filter(b => !b.cancelled_at) // Only count non-cancelled bookings
+    .map(b => ({
+      time: b.time,
+      duration: (b.sessions as any)?.duration || 60
+    }))
 }
 
 /**

@@ -108,12 +108,17 @@ export default function TransferPage({ params }: { params: Promise<{ token: stri
     setLoadingSlots(true)
     try {
       const res = await fetch(
-        `/api/availability/${booking.therapist_id}?date=${date}&session_id=${booking.session_id}`
+        `/api/availability/${booking.therapist_id}?date=${date}&duration=${booking.duration}`
       )
       const data = await res.json()
 
-      if (res.ok && data.slots) {
-        setAvailableSlots(data.slots)
+      if (res.ok && data.availableSlots) {
+        // Transform string array to TimeSlot objects
+        const slots: TimeSlot[] = data.availableSlots.map((time: string) => ({
+          time,
+          available: true
+        }))
+        setAvailableSlots(slots)
       } else {
         setAvailableSlots([])
       }
