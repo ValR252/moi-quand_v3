@@ -11,16 +11,16 @@ import { fr } from 'date-fns/locale'
  * List of supported timezones with labels
  */
 export const TIMEZONE_LIST = [
-  { value: 'Europe/Paris', label: 'Paris (France)', flag: '🇫🇷' },
-  { value: 'Europe/Zurich', label: 'Zurich (Suisse)', flag: '🇨🇭' },
-  { value: 'Europe/Brussels', label: 'Bruxelles (Belgique)', flag: '🇧🇪' },
-  { value: 'America/Montreal', label: 'Montréal (Québec)', flag: '🇨🇦' },
-  { value: 'America/Toronto', label: 'Toronto (Ontario)', flag: '🇨🇦' },
-  { value: 'America/New_York', label: 'New York (USA Est)', flag: '🇺🇸' },
-  { value: 'America/Chicago', label: 'Chicago (USA Centre)', flag: '🇺🇸' },
-  { value: 'America/Denver', label: 'Denver (USA Montagne)', flag: '🇺🇸' },
-  { value: 'America/Los_Angeles', label: 'Los Angeles (USA Ouest)', flag: '🇺🇸' },
-  { value: 'Pacific/Auckland', label: 'Auckland (Nouvelle-Zélande)', flag: '🇳🇿' },
+  { value: 'Europe/Paris', label: 'Paris (France) - GMT+1', flag: '🇫🇷' },
+  { value: 'Europe/Zurich', label: 'Zurich (Suisse) - GMT+1', flag: '🇨🇭' },
+  { value: 'Europe/Brussels', label: 'Bruxelles (Belgique) - GMT+1', flag: '🇧🇪' },
+  { value: 'America/Montreal', label: 'Montréal (Québec) - GMT-5', flag: '🇨🇦' },
+  { value: 'America/Toronto', label: 'Toronto (Ontario) - GMT-5', flag: '🇨🇦' },
+  { value: 'America/New_York', label: 'New York (USA Est) - GMT-5', flag: '🇺🇸' },
+  { value: 'America/Chicago', label: 'Chicago (USA Centre) - GMT-6', flag: '🇺🇸' },
+  { value: 'America/Denver', label: 'Denver (USA Montagne) - GMT-7', flag: '🇺🇸' },
+  { value: 'America/Los_Angeles', label: 'Los Angeles (USA Ouest) - GMT-8', flag: '🇺🇸' },
+  { value: 'Pacific/Auckland', label: 'Auckland (Nouvelle-Zélande) - GMT+12', flag: '🇳🇿' },
 ] as const
 
 export type TimezoneValue = typeof TIMEZONE_LIST[number]['value']
