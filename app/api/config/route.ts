@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getAuthenticatedUserId } from '@/lib/auth'
+import { isValidTimezone } from '@/lib/timezone-helper'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,6 +21,14 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json()
+
+    // Validate timezone if provided
+    if (body.timezone && !isValidTimezone(body.timezone)) {
+      return NextResponse.json(
+        { error: 'Invalid timezone' },
+        { status: 400 }
+      )
+    }
 
     const { data, error } = await supabase
       .from('therapists')

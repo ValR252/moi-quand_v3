@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
       email,
       phone,
       date,
-      time
+      time,
+      patient_timezone
     } = body
 
     // Validate required fields
@@ -35,7 +36,17 @@ export async function POST(request: NextRequest) {
     // Generate unique cancellation token
     const cancellationToken = crypto.randomBytes(32).toString('hex')
 
+    // Get therapist timezone first
+    const { data: therapistData } = await supabase
+      .from('therapists')
+      .select('name, cancellation_deadline_hours, timezone')
+      .eq('id', therapist_id)
+      .single()
+
+    const therapistTimezone = therapistData?.timezone || 'Europe/Zurich'
+
     // Create booking in Supabase
+    // Note: time is stored in therapist's timezone
     const { data: booking, error } = await supabase
       .from('bookings')
       .insert({
@@ -48,7 +59,9 @@ export async function POST(request: NextRequest) {
         date,
         time,
         payment_status: 'pending',
-        cancellation_token: cancellationToken
+        cancellation_token: cancellationToken,
+        patient_timezone: patient_timezone || null,
+        therapist_timezone: therapistTimezone
       })
       .select()
       .single()
@@ -60,13 +73,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-
-    // Get therapist and session details for email
-    const { data: therapistData } = await supabase
-      .from('therapists')
-      .select('name, cancellation_deadline_hours')
-      .eq('id', therapist_id)
-      .single()
 
     const { data: sessionData } = await supabase
       .from('sessions')
@@ -91,7 +97,9 @@ export async function POST(request: NextRequest) {
       duration: sessionData?.duration || 60,
       sessionLabel: sessionData?.label || 'Séance',
       cancellationToken,
-      cancellationDeadlineHours: therapistData?.cancellation_deadline_hours || 24
+      cancellationDeadlineHours: therapistData?.cancellation_deadline_hours || 24,
+      therapistTimezone: therapistTimezone,
+      patientTimezone: patient_timezone || undefined
     }).catch(err => {
       console.error('Error sending confirmation email:', err)
       // Don't fail the booking creation if email fails

@@ -105,7 +105,8 @@ export async function createCalendarEvent(
     time: string
     duration: number
     session_label: string
-  }
+  },
+  timezone: string = 'Europe/Zurich'
 ) {
   const calendar = await getCalendarClient(therapistId)
 
@@ -126,11 +127,11 @@ Booking ID: ${booking.id}
     `.trim(),
     start: {
       dateTime: startDateTime.toISOString(),
-      timeZone: 'Europe/Zurich'
+      timeZone: timezone
     },
     end: {
       dateTime: endDateTime.toISOString(),
-      timeZone: 'Europe/Zurich'
+      timeZone: timezone
     },
     attendees: [
       { email: booking.email }
@@ -161,7 +162,8 @@ export async function updateCalendarEvent(
     date?: string
     time?: string
     duration?: number
-  }
+  },
+  timezone: string = 'Europe/Zurich'
 ) {
   const calendar = await getCalendarClient(therapistId)
 
@@ -174,11 +176,11 @@ export async function updateCalendarEvent(
     requestBody: {
       start: {
         dateTime: startDateTime.toISOString(),
-        timeZone: 'Europe/Zurich'
+        timeZone: timezone
       },
       end: {
         dateTime: endDateTime.toISOString(),
-        timeZone: 'Europe/Zurich'
+        timeZone: timezone
       }
     },
     sendUpdates: 'all'
@@ -273,7 +275,8 @@ export async function saveSelectedCalendar(therapistId: string, calendarId: stri
 export async function getGoogleCalendarBusyTimes(
   therapistId: string,
   startDate: string,
-  endDate: string
+  endDate: string,
+  timezone: string = 'Europe/Zurich'
 ): Promise<Array<{ start: string; end: string }>> {
   try {
     console.log(`Fetching Google Calendar busy times for ${therapistId} from ${startDate} to ${endDate}`)
@@ -291,7 +294,7 @@ export async function getGoogleCalendarBusyTimes(
       requestBody: {
         timeMin,
         timeMax,
-        timeZone: 'Europe/Zurich',
+        timeZone: timezone,
         items: [{ id: calendarId }]
       }
     })

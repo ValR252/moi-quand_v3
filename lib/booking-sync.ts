@@ -27,6 +27,7 @@ export async function autoSyncBooking(bookingId: string) {
         phone,
         date,
         time,
+        therapist_timezone,
         sessions (
           label,
           duration
@@ -47,6 +48,9 @@ export async function autoSyncBooking(bookingId: string) {
       return
     }
 
+    // Get therapist timezone (fallback to Europe/Zurich if not set)
+    const therapistTimezone = booking.therapist_timezone || 'Europe/Zurich'
+
     // Get session data (Supabase returns array for relations)
     const session = Array.isArray(booking.sessions) ? booking.sessions[0] : booking.sessions
 
@@ -55,7 +59,7 @@ export async function autoSyncBooking(bookingId: string) {
       return
     }
 
-    // Create event in Google Calendar
+    // Create event in Google Calendar with therapist's timezone
     const eventId = await createCalendarEvent(booking.therapist_id, {
       id: booking.id,
       first_name: booking.first_name,
@@ -66,7 +70,7 @@ export async function autoSyncBooking(bookingId: string) {
       time: booking.time,
       duration: session.duration,
       session_label: session.label
-    })
+    }, therapistTimezone)
 
     // Save event ID back to booking
     await supabase
@@ -92,7 +96,7 @@ export async function syncBookingUpdate(
   try {
     const { data: booking } = await supabase
       .from('bookings')
-      .select('therapist_id, google_event_id, sessions(duration)')
+      .select('therapist_id, google_event_id, therapist_timezone, sessions(duration)')
       .eq('id', bookingId)
       .single()
 
@@ -100,6 +104,7 @@ export async function syncBookingUpdate(
 
     // Get session data (Supabase returns array for relations)
     const session = Array.isArray(booking.sessions) ? booking.sessions[0] : booking.sessions
+    const therapistTimezone = booking.therapist_timezone || 'Europe/Zurich'
 
     await updateCalendarEvent(
       booking.therapist_id,
@@ -107,7 +112,8 @@ export async function syncBookingUpdate(
       {
         ...updates,
         duration: session?.duration || 60
-      }
+      },
+      therapistTimezone
     )
 
     console.log(`✅ Booking ${bookingId} updated in Google Calendar`)

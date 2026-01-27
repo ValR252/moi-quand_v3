@@ -11,6 +11,9 @@ import { supabase, type Therapist, type Session } from '@/lib/supabase'
 import { MOCK_THERAPIST, MOCK_SESSIONS } from '@/lib/mock-data'
 import { format, addDays, startOfWeek, parseISO } from 'date-fns'
 import { fr } from 'date-fns/locale'
+import { generateAllCalendarLinks } from '@/lib/calendar-links'
+import { detectUserTimezone, convertTimeToPatientTZ, formatTimeWithLabel } from '@/lib/timezone-helper'
+import { CompactTimezoneSelector } from '@/components/TimezoneSelector'
 
 export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
   // Next.js 15: params est maintenant une Promise, il faut la unwrapper
@@ -32,8 +35,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [submitting, setSubmitting] = useState(false)
   const [success, setSuccess] = useState(false)
   const [isDemoMode, setIsDemoMode] = useState(false)
+  const [patientTimezone, setPatientTimezone] = useState<string>('')
+  const [therapistTimezone, setTherapistTimezone] = useState<string>('Europe/Zurich')
 
   useEffect(() => {
+    // Auto-detect patient timezone
+    const detected = detectUserTimezone()
+    setPatientTimezone(detected)
+
     loadTherapistData()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
@@ -65,6 +74,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
       if (therapistData) {
         setTherapist(therapistData)
+        // Set therapist timezone (default to Europe/Zurich if not set)
+        setTherapistTimezone(therapistData.timezone || 'Europe/Zurich')
       } else {
         // Fallback vers données de démo si thérapeute non trouvé
         setIsDemoMode(true)
@@ -160,6 +171,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         phone: formData.phone,
         date: format(selectedDate, 'yyyy-MM-dd'),
         time: selectedTime,
+        patient_timezone: patientTimezone,
       })
     })
 
@@ -196,6 +208,17 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   }
 
   if (success) {
+    // Generate calendar links if we have the necessary data
+    // Use patient timezone for calendar links (so it appears at the correct time in their calendar)
+    const calendarLinks = selectedDate && selectedTime && selectedSession ? generateAllCalendarLinks({
+      title: `${selectedSession.label} - ${therapist.name}`,
+      description: `Rendez-vous avec ${therapist.name}\nDurée: ${selectedSession.duration} minutes\nType: ${selectedSession.label}`,
+      startDate: format(selectedDate, 'yyyy-MM-dd'),
+      startTime: selectedTime,
+      duration: selectedSession.duration,
+      timezone: patientTimezone
+    }) : null
+
     return (
       <div className="min-h-screen bg-gradient-animated flex items-center justify-center p-4">
         <div className="max-w-md w-full bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 text-center animate-[scaleIn_0.5s_ease-out]">
@@ -212,6 +235,77 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
               Vous recevrez un email de confirmation à <strong>{formData.email}</strong> avec les instructions de paiement.
             </p>
           )}
+
+          {/* Appointment Details with Timezones */}
+          {selectedDate && selectedTime && (
+            <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-4 mb-6 border border-blue-200 dark:border-blue-800 text-left">
+              <p className="font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                📅 {format(selectedDate, 'EEEE d MMMM yyyy', { locale: fr })}
+              </p>
+              {therapistTimezone !== patientTimezone ? (
+                <>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-1">
+                    🕐 <strong>Votre heure:</strong> {convertTimeToPatientTZ(
+                      format(selectedDate, 'yyyy-MM-dd'),
+                      selectedTime,
+                      therapistTimezone,
+                      patientTimezone
+                    )} {formatTimeWithLabel('', patientTimezone).replace(' (heure de ', '(').replace(')', '')}
+                  </p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                    🕐 <strong>Heure du thérapeute:</strong> {selectedTime} {formatTimeWithLabel('', therapistTimezone).replace(' (heure de ', '(').replace(')', '')}
+                  </p>
+                </>
+              ) : (
+                <p className="text-sm text-gray-700 dark:text-gray-300">
+                  🕐 <strong>Heure:</strong> {selectedTime}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Calendar Links */}
+          {calendarLinks && (
+            <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 mb-6 border border-green-200 dark:border-green-800">
+              <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">
+                📅 Ajouter à votre agenda
+              </p>
+              <div className="flex flex-col gap-2">
+                <a
+                  href={calendarLinks.google}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors"
+                >
+                  Google Calendar
+                </a>
+                <a
+                  href={calendarLinks.outlook}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  Outlook
+                </a>
+                <a
+                  href={calendarLinks.office365}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  Office 365
+                </a>
+                <a
+                  href={calendarLinks.ics}
+                  download="rendez-vous.ics"
+                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
+                >
+                  Télécharger .ics
+                </a>
+              </div>
+            </div>
+          )}
+
           <div className="bg-indigo-50 dark:bg-indigo-950 rounded-xl p-4 mb-6">
             <p className="text-sm text-gray-700 dark:text-gray-300">
               <strong>Paiement :</strong> Virement bancaire<br />
@@ -313,10 +407,21 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           {/* Étape 2 : Choisir la date */}
           {selectedSession && (
             <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 animate-[fadeIn_0.7s_ease-out]">
-              <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm">2</span>
-                Choisissez une date
-              </h2>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold mb-2 flex items-center gap-2">
+                  <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm">2</span>
+                  Choisissez une date
+                </h2>
+                {/* Timezone selector integrated as subtitle */}
+                {patientTimezone && (
+                  <div className="ml-10 flex items-center gap-2 text-sm">
+                    <CompactTimezoneSelector
+                      value={patientTimezone}
+                      onChange={setPatientTimezone}
+                    />
+                  </div>
+                )}
+              </div>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 {availableDates.map((date) => (
                   <button
@@ -365,20 +470,37 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
-                  {displayTimes.map((time) => (
-                    <button
-                      key={time}
-                      type="button"
-                      onClick={() => setSelectedTime(time)}
-                      className={`p-3 rounded-xl border-2 font-medium transition-all hover:scale-105 active:scale-95 ${
-                        selectedTime === time
-                          ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 shadow-lg'
-                          : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
-                      }`}
-                    >
-                      {time}
-                    </button>
-                  ))}
+                  {displayTimes.map((time) => {
+                    // Convert time from therapist timezone to patient timezone
+                    const patientTime = therapistTimezone !== patientTimezone && selectedDate
+                      ? convertTimeToPatientTZ(
+                          format(selectedDate, 'yyyy-MM-dd'),
+                          time,
+                          therapistTimezone,
+                          patientTimezone
+                        )
+                      : time
+
+                    return (
+                      <button
+                        key={time}
+                        type="button"
+                        onClick={() => setSelectedTime(time)}
+                        className={`p-3 rounded-xl border-2 font-medium transition-all hover:scale-105 active:scale-95 ${
+                          selectedTime === time
+                            ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 shadow-lg'
+                            : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
+                        }`}
+                      >
+                        <div className="text-base">{patientTime}</div>
+                        {therapistTimezone !== patientTimezone && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            ({time} thérapeute)
+                          </div>
+                        )}
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </div>

@@ -32,6 +32,15 @@ export async function getAvailableSlots(
 ): Promise<string[]> {
   console.log(`Calculating available slots for therapist ${therapistId} on ${date} (${sessionDuration}min session)`)
 
+  // 0. Get therapist timezone
+  const { data: therapist } = await supabase
+    .from('therapists')
+    .select('timezone')
+    .eq('id', therapistId)
+    .single()
+
+  const therapistTimezone = therapist?.timezone || 'Europe/Zurich'
+
   // 1. Check if date is a holiday
   const isHolidayDay = await isHoliday(therapistId, date)
   if (isHolidayDay) {
@@ -70,7 +79,7 @@ export async function getAvailableSlots(
   let googleBusyTimes: Array<{ start: string; end: string }> = []
   const hasGoogleCal = await hasGoogleCalendarConnected(therapistId)
   if (hasGoogleCal) {
-    googleBusyTimes = await getGoogleCalendarBusyTimes(therapistId, date, date)
+    googleBusyTimes = await getGoogleCalendarBusyTimes(therapistId, date, date, therapistTimezone)
     console.log(`Found ${googleBusyTimes.length} busy periods in Google Calendar`)
   } else {
     console.log('Google Calendar not connected - skipping calendar busy times')

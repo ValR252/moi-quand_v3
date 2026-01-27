@@ -4,6 +4,8 @@
  */
 
 import { Resend } from 'resend'
+import { generateAllCalendarLinks } from './calendar-links'
+import { convertTimeToPatientTZ, formatTimeWithLabel, getTimezoneLabel } from './timezone-helper'
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY)
@@ -25,10 +27,34 @@ export async function sendBookingConfirmationEmail(params: {
   sessionLabel: string
   cancellationToken: string
   cancellationDeadlineHours: number
+  therapistTimezone?: string
+  patientTimezone?: string
 }) {
-  const { to, patientName, therapistName, date, time, duration, sessionLabel, cancellationToken, cancellationDeadlineHours } = params
+  const {
+    to,
+    patientName,
+    therapistName,
+    date,
+    time,
+    duration,
+    sessionLabel,
+    cancellationToken,
+    cancellationDeadlineHours,
+    therapistTimezone = 'Europe/Zurich',
+    patientTimezone
+  } = params
 
   const cancellationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/cancel/${cancellationToken}`
+
+  // Generate calendar links (use patient timezone for their calendar, or therapist timezone if not provided)
+  const calendarLinks = generateAllCalendarLinks({
+    title: `${sessionLabel} - ${therapistName}`,
+    description: `Rendez-vous avec ${therapistName}\nDurée: ${duration} minutes\nType: ${sessionLabel}`,
+    startDate: date,
+    startTime: time,
+    duration: duration,
+    timezone: patientTimezone || therapistTimezone
+  })
 
   try {
     await resend.emails.send({
@@ -68,14 +94,33 @@ export async function sendBookingConfirmationEmail(params: {
                 <div class="detail-row">
                   <strong>Date :</strong> ${new Date(date).toLocaleDateString('fr-FR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
-                <div class="detail-row">
-                  <strong>Heure :</strong> ${time}
-                </div>
+                ${patientTimezone && therapistTimezone !== patientTimezone ? `
+                  <div class="detail-row">
+                    <strong>Votre heure :</strong> ${convertTimeToPatientTZ(date, time, therapistTimezone, patientTimezone)} (${getTimezoneLabel(patientTimezone)})
+                  </div>
+                  <div class="detail-row">
+                    <strong>Heure du thérapeute :</strong> ${time} (${getTimezoneLabel(therapistTimezone)})
+                  </div>
+                ` : `
+                  <div class="detail-row">
+                    <strong>Heure :</strong> ${time}
+                  </div>
+                `}
                 <div class="detail-row">
                   <strong>Durée :</strong> ${duration} minutes
                 </div>
                 <div class="detail-row">
                   <strong>Type de séance :</strong> ${sessionLabel}
+                </div>
+              </div>
+
+              <div style="margin: 30px 0; padding: 20px; background-color: #f0fdf4; border-radius: 8px; text-align: center;">
+                <p style="margin: 0 0 15px 0;"><strong>📅 Ajouter à votre agenda</strong></p>
+                <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                  <a href="${calendarLinks.google}" style="display: inline-block; padding: 10px 20px; background-color: #4285F4; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; min-width: 200px;">Google Calendar</a>
+                  <a href="${calendarLinks.outlook}" style="display: inline-block; padding: 10px 20px; background-color: #0078D4; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; min-width: 200px;">Outlook</a>
+                  <a href="${calendarLinks.office365}" style="display: inline-block; padding: 10px 20px; background-color: #D83B01; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; min-width: 200px;">Office 365</a>
+                  <a href="${calendarLinks.ics}" download="rendez-vous.ics" style="display: inline-block; padding: 10px 20px; background-color: #6b7280; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; min-width: 200px;">Télécharger .ics</a>
                 </div>
               </div>
 
@@ -298,6 +343,15 @@ export async function sendTransferEmailToPatient(params: {
 
   const cancellationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/cancel/${newCancellationToken}`
 
+  // Generate calendar links for new appointment
+  const calendarLinks = generateAllCalendarLinks({
+    title: `${sessionLabel} - ${therapistName}`,
+    description: `Rendez-vous avec ${therapistName}\nDurée: ${duration} minutes\nType: ${sessionLabel}`,
+    startDate: newDate,
+    startTime: newTime,
+    duration: duration
+  })
+
   try {
     await resend.emails.send({
       from: `${FROM_NAME} <${FROM_EMAIL}>`,
@@ -348,6 +402,16 @@ export async function sendTransferEmailToPatient(params: {
                 </div>
                 <div class="detail-row">
                   <strong>Type de séance :</strong> ${sessionLabel}
+                </div>
+              </div>
+
+              <div style="margin: 30px 0; padding: 20px; background-color: #f0fdf4; border-radius: 8px; text-align: center;">
+                <p style="margin: 0 0 15px 0;"><strong>📅 Ajouter à votre agenda</strong></p>
+                <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+                  <a href="${calendarLinks.google}" style="display: inline-block; padding: 10px 20px; background-color: #4285F4; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; min-width: 200px;">Google Calendar</a>
+                  <a href="${calendarLinks.outlook}" style="display: inline-block; padding: 10px 20px; background-color: #0078D4; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; min-width: 200px;">Outlook</a>
+                  <a href="${calendarLinks.office365}" style="display: inline-block; padding: 10px 20px; background-color: #D83B01; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; min-width: 200px;">Office 365</a>
+                  <a href="${calendarLinks.ics}" download="rendez-vous.ics" style="display: inline-block; padding: 10px 20px; background-color: #6b7280; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; min-width: 200px;">Télécharger .ics</a>
                 </div>
               </div>
 

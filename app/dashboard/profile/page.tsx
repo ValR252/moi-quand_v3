@@ -10,6 +10,7 @@ import DashboardLayout from '@/components/dashboard/DashboardLayout'
 import Toggle from '@/components/ui/Toggle'
 import Badge from '@/components/ui/Badge'
 import { Therapist } from '@/lib/supabase'
+import TimezoneSelector from '@/components/TimezoneSelector'
 
 export default function ProfilePage() {
   const [therapist, setTherapist] = useState<Therapist | null>(null)
@@ -33,6 +34,7 @@ export default function ProfilePage() {
     website: '',
     booking_enabled: true,
     auto_confirm: false,
+    timezone: 'Europe/Zurich',
   })
 
   useEffect(() => {
@@ -70,6 +72,7 @@ export default function ProfilePage() {
           website: data.therapist.website || '',
           booking_enabled: data.therapist.booking_enabled ?? true,
           auto_confirm: data.therapist.auto_confirm ?? false,
+          timezone: data.therapist.timezone || 'Europe/Zurich',
         })
       }
     } catch (error) {
@@ -476,6 +479,18 @@ export default function ProfilePage() {
                 label="Confirmation automatique"
                 description="Les réservations sont confirmées sans votre intervention"
               />
+
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+                <TimezoneSelector
+                  value={formData.timezone}
+                  onChange={(timezone) => setFormData({ ...formData, timezone })}
+                  label="Fuseau horaire"
+                  showFlag={true}
+                />
+                <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                  Tous vos horaires de disponibilité et rendez-vous seront affichés dans ce fuseau horaire.
+                </p>
+              </div>
             </div>
           </section>
 
