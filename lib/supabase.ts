@@ -50,6 +50,14 @@ export type Therapist = {
   cancellation_policy?: 'refund' | 'transfer' | 'both'
   cancellation_deadline_hours?: number
   refund_automatic?: boolean
+  // Feature 1: Booking limit (months in advance)
+  booking_limit_months?: number
+  // Feature 2: PayPal configuration
+  paypal_enabled?: boolean
+  paypal_client_id?: string | null
+  paypal_client_secret?: string | null
+  paypal_webhook_id?: string | null
+  paypal_environment?: 'sandbox' | 'production'
 }
 
 export type Session = {
@@ -130,4 +138,8 @@ export type Booking = {
   // Transfer tracking
   original_booking_id?: string | null
   transferred_to_booking_id?: string | null
+  // Feature 2: PayPal tracking
+  paypal_order_id?: string | null
+  paypal_capture_id?: string | null
+  paypal_refund_id?: string | null
 }
