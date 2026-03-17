@@ -2,21 +2,19 @@
 
 /**
  * Page de réservation publique
- * Frontend Developer: Formulaire de réservation avec animations
- * Backend Engineer: Données de démo en fallback
+ * Features: Booking limit check + PayPal payment option
  */
 
 import { use, useEffect, useState } from 'react'
 import { supabase, type Therapist, type Session } from '@/lib/supabase'
 import { MOCK_THERAPIST, MOCK_SESSIONS } from '@/lib/mock-data'
-import { format, addDays, startOfWeek, parseISO } from 'date-fns'
+import { format, addDays, startOfWeek, parseISO, addMonths, startOfDay, isAfter, isBefore } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { generateAllCalendarLinks } from '@/lib/calendar-links'
 import { detectUserTimezone, convertTimeToPatientTZ, formatTimeWithLabel } from '@/lib/timezone-helper'
 import { CompactTimezoneSelector } from '@/components/TimezoneSelector'
 
 export default function BookingPage({ params }: { params: Promise<{ id: string }> }) {
-  // Next.js 15: params est maintenant une Promise, il faut la unwrapper
   const { id } = use(params)
   const [therapist, setTherapist] = useState<Therapist | null>(null)
   const [sessions, setSessions] = useState<Session[]>([])
@@ -37,31 +35,36 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [isDemoMode, setIsDemoMode] = useState(false)
   const [patientTimezone, setPatientTimezone] = useState<string>('')
   const [therapistTimezone, setTherapistTimezone] = useState<string>('Europe/Zurich')
+  
+  // Feature 1: Booking limit
+  const [bookingLimit, setBookingLimit] = useState<number>(2)
+  const [maxBookingDate, setMaxBookingDate] = useState<Date>(addMonths(new Date(), 2))
+  
+  // Feature 2: Payment
+  const [paymentMethod, setPaymentMethod] = useState<'bank_transfer' | 'paypal'>('bank_transfer')
+  const [paypalLoading, setPaypalLoading] = useState(false)
+  const [bookingId, setBookingId] = useState<string | null>(null)
 
   useEffect(() => {
-    // Auto-detect patient timezone
     const detected = detectUserTimezone()
     setPatientTimezone(detected)
-
     loadTherapistData()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  // Fetch available slots when date or session changes
   useEffect(() => {
     if (selectedDate && selectedSession && therapist && !isDemoMode) {
       fetchAvailableSlots()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate, selectedSession])
 
   async function loadTherapistData() {
     try {
-      // Si l'ID est "demo", utiliser directement les données de démo
       if (id === 'demo') {
         setIsDemoMode(true)
         setTherapist(MOCK_THERAPIST as any)
         setSessions(MOCK_SESSIONS as any)
+        setBookingLimit(2)
+        setMaxBookingDate(addMonths(new Date(), 2))
         setLoading(false)
         return
       }
@@ -74,10 +77,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
       if (therapistData) {
         setTherapist(therapistData)
-        // Set therapist timezone (default to Europe/Zurich if not set)
         setTherapistTimezone(therapistData.timezone || 'Europe/Zurich')
+        // Feature 1: Set booking limit
+        const limitMonths = therapistData.booking_limit_months ?? 2
+        setBookingLimit(limitMonths)
+        setMaxBookingDate(addMonths(startOfDay(new Date()), limitMonths))
       } else {
-        // Fallback vers données de démo si thérapeute non trouvé
         setIsDemoMode(true)
         setTherapist(MOCK_THERAPIST as any)
       }
@@ -91,13 +96,11 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       if (sessionsData && sessionsData.length > 0) {
         setSessions(sessionsData)
       } else {
-        // Fallback vers sessions de démo
         setSessions(MOCK_SESSIONS as any)
       }
 
       setLoading(false)
     } catch (error) {
-      // En cas d'erreur Supabase, utiliser les données de démo
       console.warn('Supabase error, using demo data:', error)
       setIsDemoMode(true)
       setTherapist(MOCK_THERAPIST as any)
@@ -111,13 +114,11 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
     setLoadingSlots(true)
     setAvailableTimes([])
-    setSelectedTime(null) // Reset selected time when date changes
+    setSelectedTime(null)
 
     try {
       const dateStr = format(selectedDate, 'yyyy-MM-dd')
       const duration = selectedSession.duration
-
-      console.log(`Fetching available slots for ${dateStr} (${duration}min session)`)
 
       const response = await fetch(
         `/api/availability/${therapist.id}?date=${dateStr}&duration=${duration}`
@@ -125,10 +126,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
       if (response.ok) {
         const data = await response.json()
-        console.log(`Received ${data.count} available slots:`, data.availableSlots)
         setAvailableTimes(data.availableSlots || [])
       } else {
-        console.error('Failed to fetch availability:', response.status)
         setAvailableTimes([])
       }
     } catch (error) {
@@ -139,6 +138,13 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     setLoadingSlots(false)
   }
 
+  // Feature 1: Check if date is within booking limit
+  function isDateWithinLimit(date: Date): boolean {
+    const today = startOfDay(new Date())
+    const limitDate = addMonths(today, bookingLimit)
+    return date >= today && date <= limitDate
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
 
@@ -147,9 +153,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       return
     }
 
+    // Feature 1: Verify booking limit
+    if (!isDateWithinLimit(selectedDate)) {
+      alert(`Les réservations ne sont possibles que jusqu'à ${bookingLimit} mois à l'avance.`)
+      return
+    }
+
     setSubmitting(true)
 
-    // En mode démo, simuler la réservation sans toucher à Supabase
     if (isDemoMode) {
       setTimeout(() => {
         setSuccess(true)
@@ -158,32 +169,72 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       return
     }
 
-    // Create booking via API (with auto Google Calendar sync)
-    const response = await fetch('/api/bookings/create', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        therapist_id: id,
-        session_id: selectedSession.id,
-        first_name: formData.firstName,
-        last_name: formData.lastName,
-        email: formData.email,
-        phone: formData.phone,
-        date: format(selectedDate, 'yyyy-MM-dd'),
-        time: selectedTime,
-        patient_timezone: patientTimezone,
+    try {
+      // Create booking via API
+      const response = await fetch('/api/bookings/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          therapist_id: id,
+          session_id: selectedSession.id,
+          first_name: formData.firstName,
+          last_name: formData.lastName,
+          email: formData.email,
+          phone: formData.phone,
+          date: format(selectedDate, 'yyyy-MM-dd'),
+          time: selectedTime,
+          patient_timezone: patientTimezone,
+          payment_method: paymentMethod,
+        })
       })
-    })
 
-    if (!response.ok) {
-      console.error('Erreur:', await response.json())
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Erreur:', errorData)
+        alert(errorData.error || 'Erreur lors de la réservation. Veuillez réessayer.')
+        setSubmitting(false)
+        return
+      }
+
+      const bookingData = await response.json()
+      setBookingId(bookingData.booking.id)
+
+      // Feature 2: If PayPal selected, create PayPal order
+      if (paymentMethod === 'paypal' && therapist?.paypal_enabled) {
+        setPaypalLoading(true)
+        const paypalResponse = await fetch('/api/paypal/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            therapist_id: id,
+            session_id: selectedSession.id,
+            booking_id: bookingData.booking.id,
+            return_url: `${window.location.origin}/payment/success`,
+            cancel_url: `${window.location.origin}/payment/cancel`,
+          })
+        })
+
+        if (paypalResponse.ok) {
+          const paypalData = await paypalResponse.json()
+          // Redirect to PayPal
+          window.location.href = paypalData.approvalUrl
+          return
+        } else {
+          const paypalError = await paypalResponse.json()
+          console.error('PayPal error:', paypalError)
+          alert('Erreur lors de la création du paiement PayPal. Vous pouvez payer par virement.')
+          setPaypalLoading(false)
+          setSuccess(true)
+        }
+      } else {
+        setSuccess(true)
+      }
+    } catch (error) {
+      console.error('Error creating booking:', error)
       alert('Erreur lors de la réservation. Veuillez réessayer.')
+    } finally {
       setSubmitting(false)
-      return
     }
-
-    setSuccess(true)
-    setSubmitting(false)
   }
 
   if (loading) {
@@ -208,8 +259,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   }
 
   if (success) {
-    // Generate calendar links if we have the necessary data
-    // Use patient timezone for calendar links (so it appears at the correct time in their calendar)
     const calendarLinks = selectedDate && selectedTime && selectedSession ? generateAllCalendarLinks({
       title: `${selectedSession.label} - ${therapist.name}`,
       description: `Rendez-vous avec ${therapist.name}\nDurée: ${selectedSession.duration} minutes\nType: ${selectedSession.label}`,
@@ -228,7 +277,11 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
           </h2>
           {isDemoMode ? (
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              🎭 <strong>Mode Démo</strong> - Dans la version réelle, vous recevriez un email de confirmation à <strong>{formData.email}</strong> avec les instructions de paiement.
+              🎭 <strong>Mode Démo</strong> - Dans la version réelle, vous recevriez un email de confirmation.
+            </p>
+          ) : paymentMethod === 'paypal' ? (
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              Vous allez être redirigé vers PayPal pour finaliser le paiement.
             </p>
           ) : (
             <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -236,7 +289,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </p>
           )}
 
-          {/* Appointment Details with Timezones */}
           {selectedDate && selectedTime && (
             <div className="bg-blue-50 dark:bg-blue-950/30 rounded-xl p-4 mb-6 border border-blue-200 dark:border-blue-800 text-left">
               <p className="font-semibold text-gray-800 dark:text-gray-200 mb-3">
@@ -250,10 +302,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                       selectedTime,
                       therapistTimezone,
                       patientTimezone
-                    )} {formatTimeWithLabel('', patientTimezone).replace(' (heure de ', '(').replace(')', '')}
+                    )}
                   </p>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
-                    🕐 <strong>Heure du thérapeute:</strong> {selectedTime} {formatTimeWithLabel('', therapistTimezone).replace(' (heure de ', '(').replace(')', '')}
+                    🕐 <strong>Heure du thérapeute:</strong> {selectedTime}
                   </p>
                 </>
               ) : (
@@ -264,54 +316,34 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          {/* Calendar Links */}
           {calendarLinks && (
             <div className="bg-green-50 dark:bg-green-950/30 rounded-xl p-4 mb-6 border border-green-200 dark:border-green-800">
               <p className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">
                 📅 Ajouter à votre agenda
               </p>
               <div className="flex flex-col gap-2">
-                <a
-                  href={calendarLinks.google}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors"
-                >
+                <a href={calendarLinks.google} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors">
                   Google Calendar
                 </a>
-                <a
-                  href={calendarLinks.outlook}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-                >
+                <a href={calendarLinks.outlook} target="_blank" rel="noopener noreferrer" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors">
                   Outlook
                 </a>
-                <a
-                  href={calendarLinks.office365}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm rounded-lg transition-colors"
-                >
-                  Office 365
-                </a>
-                <a
-                  href={calendarLinks.ics}
-                  download="rendez-vous.ics"
-                  className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors"
-                >
+                <a href={calendarLinks.ics} download="rendez-vous.ics" className="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded-lg transition-colors">
                   Télécharger .ics
                 </a>
               </div>
             </div>
           )}
 
-          <div className="bg-indigo-50 dark:bg-indigo-950 rounded-xl p-4 mb-6">
-            <p className="text-sm text-gray-700 dark:text-gray-300">
-              <strong>Paiement :</strong> Virement bancaire<br />
-              Les informations bancaires vous seront envoyées par email.
-            </p>
-          </div>
+          {paymentMethod === 'bank_transfer' && (
+            <div className="bg-indigo-50 dark:bg-indigo-950 rounded-xl p-4 mb-6">
+              <p className="text-sm text-gray-700 dark:text-gray-300">
+                <strong>Paiement :</strong> Virement bancaire<br />
+                Les informations bancaires vous seront envoyées par email.
+              </p>
+            </div>
+          )}
+
           <button
             onClick={() => window.location.reload()}
             className="w-full px-6 py-3 bg-indigo-600 text-white rounded-xl font-medium hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95"
@@ -323,16 +355,15 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
     )
   }
 
-  // Générer les 14 prochains jours
-  const availableDates = Array.from({ length: 14 }, (_, i) => addDays(new Date(), i))
+  // Generate available dates (respecting booking limit)
+  const availableDates = Array.from({ length: 60 }, (_, i) => addDays(new Date(), i))
+    .filter(date => isDateWithinLimit(date))
 
-  // Horaires de démonstration (seulement pour mode démo)
   const demoTimes = [
     '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
     '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
   ]
 
-  // Utiliser les créneaux de démo ou les créneaux réels selon le mode
   const displayTimes = isDemoMode ? demoTimes : availableTimes
 
   return (
@@ -342,12 +373,21 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         {isDemoMode && (
           <div className="bg-amber-100 dark:bg-amber-900 border border-amber-300 dark:border-amber-700 rounded-xl p-4 mb-6 text-center">
             <div className="text-amber-800 dark:text-amber-200">
-              🎭 <strong>Mode Démo</strong> - Ceci est un exemple avec des données fictives. Aucune vraie réservation ne sera créée.
+              🎭 <strong>Mode Démo</strong> - Ceci est un exemple avec des données fictives.
             </div>
           </div>
         )}
 
-        {/* Header du thérapeute */}
+        {/* Feature 1: Booking limit info */}
+        {!isDemoMode && (
+          <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-700 rounded-xl p-4 mb-6 text-center">
+            <div className="text-blue-800 dark:text-blue-200 text-sm">
+              📅 Les réservations sont possibles jusqu'au <strong>{format(maxBookingDate, 'd MMMM yyyy', { locale: fr })}</strong> ({bookingLimit} mois à l'avance)
+            </div>
+          </div>
+        )}
+
+        {/* Header */}
         <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 mb-8 animate-[fadeIn_0.5s_ease-out]">
           <div className="flex items-center gap-6">
             {therapist.photo_url ? (
@@ -376,7 +416,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Étape 1 : Choisir la séance */}
+          {/* Step 1: Session */}
           <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 animate-[fadeIn_0.6s_ease-out]">
             <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
               <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm">1</span>
@@ -397,14 +437,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   <div className="font-semibold text-lg mb-2">{session.label}</div>
                   <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
                     <div>⏱️ {session.duration} minutes</div>
-                    <div className="text-2xl font-bold text-indigo-600">{session.price}€</div>
+                    <div className="text-2xl font-bold text-indigo-600">{session.price} CHF</div>
                   </div>
                 </button>
               ))}
             </div>
           </div>
 
-          {/* Étape 2 : Choisir la date */}
+          {/* Step 2: Date */}
           {selectedSession && (
             <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 animate-[fadeIn_0.7s_ease-out]">
               <div className="mb-6">
@@ -412,7 +452,6 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm">2</span>
                   Choisissez une date
                 </h2>
-                {/* Timezone selector integrated as subtitle */}
                 {patientTimezone && (
                   <div className="ml-10 flex items-center gap-2 text-sm">
                     <CompactTimezoneSelector
@@ -422,6 +461,8 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   </div>
                 )}
               </div>
+              
+              {/* Feature 1: Show limited dates */}
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                 {availableDates.map((date) => (
                   <button
@@ -446,10 +487,16 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                   </button>
                 ))}
               </div>
+              
+              {availableDates.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <p>Aucune date disponible dans la limite de réservation.</p>
+                </div>
+              )}
             </div>
           )}
 
-          {/* Étape 3 : Choisir l'heure */}
+          {/* Step 3: Time */}
           {selectedDate && (
             <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 animate-[fadeIn_0.8s_ease-out]">
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
@@ -460,18 +507,16 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
               {loadingSlots ? (
                 <div className="text-center py-12">
                   <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-indigo-600 border-r-transparent"></div>
-                  <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement des créneaux disponibles...</p>
+                  <p className="mt-4 text-gray-600 dark:text-gray-400">Chargement des créneaux...</p>
                 </div>
               ) : displayTimes.length === 0 ? (
                 <div className="text-center py-12 text-gray-500">
                   <div className="text-6xl mb-4">📭</div>
                   <p className="text-lg font-medium">Aucun créneau disponible ce jour-là</p>
-                  <p className="text-sm mt-2">Essayez un autre jour ou une autre durée de session</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
                   {displayTimes.map((time) => {
-                    // Convert time from therapist timezone to patient timezone
                     const patientTime = therapistTimezone !== patientTimezone && selectedDate
                       ? convertTimeToPatientTZ(
                           format(selectedDate, 'yyyy-MM-dd'),
@@ -495,7 +540,7 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                         <div className="text-base">{patientTime}</div>
                         {therapistTimezone !== patientTimezone && (
                           <div className="text-xs text-gray-500 mt-1">
-                            ({time} thérapeute)
+                            ({time})
                           </div>
                         )}
                       </button>
@@ -506,13 +551,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
             </div>
           )}
 
-          {/* Étape 4 : Informations */}
+          {/* Step 4: Info + Payment */}
           {selectedTime && (
             <div className="bg-white/80 dark:bg-gray-900/70 backdrop-blur-xl rounded-2xl border border-white/20 shadow-xl p-8 animate-[fadeIn_0.9s_ease-out]">
               <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
                 <span className="flex items-center justify-center w-8 h-8 rounded-full bg-indigo-600 text-white text-sm">4</span>
                 Vos informations
               </h2>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium mb-2">Prénom *</label>
@@ -554,14 +600,62 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                    placeholder="06 12 34 56 78"
+                    placeholder="+41 XX XXX XX XX"
                   />
                 </div>
               </div>
 
-              {/* Récapitulatif */}
+              {/* Feature 2: Payment Method Selection */}
+              {!isDemoMode && therapist?.paypal_enabled && (
+                <div className="mt-8">
+                  <h3 className="text-lg font-semibold mb-4">Méthode de paiement</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('bank_transfer')}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        paymentMethod === 'bank_transfer'
+                          ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gray-200 dark:bg-gray-700 rounded-lg flex items-center justify-center">
+                          🏦
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold">Virement bancaire</div>
+                          <div className="text-sm text-gray-500">Payer après la réservation</div>
+                        </div>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('paypal')}
+                      className={`p-4 rounded-xl border-2 transition-all ${
+                        paymentMethod === 'paypal'
+                          ? 'border-blue-600 bg-blue-50 dark:bg-blue-950'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-blue-300'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                          P
+                        </div>
+                        <div className="text-left">
+                          <div className="font-semibold">PayPal</div>
+                          <div className="text-sm text-gray-500">Paiement sécurisé en ligne</div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Summary */}
               <div className="mt-8 p-6 bg-indigo-50 dark:bg-indigo-950 rounded-xl">
-                <h3 className="font-bold mb-4">Récapitulatif de votre réservation</h3>
+                <h3 className="font-bold mb-4">Récapitulatif</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
                     <span>Séance :</span>
@@ -581,23 +675,38 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                     <span>Durée :</span>
                     <span className="font-medium">{selectedSession?.duration} min</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span>Paiement :</span>
+                    <span className="font-medium">
+                      {paymentMethod === 'paypal' ? 'PayPal' : 'Virement bancaire'}
+                    </span>
+                  </div>
                   <div className="border-t border-indigo-200 dark:border-indigo-800 mt-4 pt-4 flex justify-between text-lg font-bold">
                     <span>Total :</span>
-                    <span className="text-indigo-600">{selectedSession?.price}€</span>
+                    <span className="text-indigo-600">{selectedSession?.price} CHF</span>
                   </div>
                 </div>
               </div>
 
               <button
                 type="submit"
-                disabled={submitting}
+                disabled={submitting || paypalLoading}
                 className="w-full mt-6 px-6 py-4 bg-indigo-600 text-white rounded-xl font-semibold text-lg hover:bg-indigo-700 transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
-                {submitting ? '⏳ Réservation en cours...' : '✓ Confirmer la réservation'}
+                {submitting || paypalLoading ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    {paypalLoading ? 'Redirection vers PayPal...' : 'Réservation en cours...'}
+                  </span>
+                ) : (
+                  paymentMethod === 'paypal' ? 'Payer avec PayPal' : 'Confirmer la réservation'
+                )}
               </button>
 
               <p className="text-xs text-gray-500 text-center mt-4">
-                Le paiement se fait par virement bancaire. Vous recevrez les instructions par email.
+                {paymentMethod === 'paypal' 
+                  ? 'Vous serez redirigé vers PayPal pour finaliser le paiement.'
+                  : 'Le paiement se fait par virement bancaire. Vous recevrez les instructions par email.'}
               </p>
             </div>
           )}
@@ -606,24 +715,12 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
 
       <style jsx>{`
         @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         @keyframes scaleIn {
-          from {
-            opacity: 0;
-            transform: scale(0.9);
-          }
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
         }
       `}</style>
     </div>

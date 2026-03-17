@@ -22,7 +22,8 @@ export async function POST(request: NextRequest) {
       phone,
       date,
       time,
-      patient_timezone
+      patient_timezone,
+      payment_method
     } = body
 
     // Validate required fields
@@ -59,6 +60,7 @@ export async function POST(request: NextRequest) {
         date,
         time,
         payment_status: 'pending',
+        payment_method: payment_method || 'bank_transfer',
         cancellation_token: cancellationToken,
         patient_timezone: patient_timezone || null,
         therapist_timezone: therapistTimezone
