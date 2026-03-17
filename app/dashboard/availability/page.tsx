@@ -18,6 +18,7 @@ export default function AvailabilityPage() {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [holidays, setHolidays] = useState<Holiday[]>([])
   const [noticeHours, setNoticeHours] = useState(2)
+  const [bookingLimitMonths, setBookingLimitMonths] = useState(2)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
 
@@ -42,16 +43,23 @@ export default function AvailabilityPage() {
 
   async function loadData() {
     try {
-      const [schedulesRes, holidaysRes] = await Promise.all([
+      const [schedulesRes, holidaysRes, therapistRes] = await Promise.all([
         fetch('/api/schedules'),
         fetch('/api/holidays'),
+        fetch('/api/therapist'),
       ])
 
       const schedulesData = await schedulesRes.json()
       const holidaysData = await holidaysRes.json()
+      const therapistData = await therapistRes.json()
 
       setSchedules(schedulesData.schedules || [])
       setHolidays(holidaysData.holidays || [])
+      
+      if (therapistData.therapist) {
+        setNoticeHours(therapistData.therapist.notice_hours ?? 2)
+        setBookingLimitMonths(therapistData.therapist.booking_limit_months ?? 2)
+      }
     } catch (error) {
       console.error('Error loading data:', error)
     } finally {
@@ -150,6 +158,19 @@ export default function AvailabilityPage() {
       alert('Délai de préavis enregistré')
     } catch (error) {
       console.error('Error saving notice hours:', error)
+    }
+  }
+
+  async function saveBookingLimit() {
+    try {
+      await fetch('/api/config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ booking_limit_months: bookingLimitMonths }),
+      })
+      alert('Limite de réservation enregistrée')
+    } catch (error) {
+      console.error('Error saving booking limit:', error)
     }
   }
 
@@ -259,6 +280,37 @@ export default function AvailabilityPage() {
 
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
                 Les clients doivent réserver au moins {noticeHours}h à l'avance
+              </p>
+            </section>
+
+            {/* Booking Limit */}
+            <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                Limite de réservation
+              </h2>
+
+              <div className="flex items-center gap-4">
+                <input
+                  type="range"
+                  min="1"
+                  max="12"
+                  value={bookingLimitMonths}
+                  onChange={(e) => setBookingLimitMonths(parseInt(e.target.value))}
+                  className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+                />
+                <span className="w-24 text-center font-medium text-indigo-600 dark:text-indigo-400">
+                  {bookingLimitMonths} mois
+                </span>
+                <button
+                  onClick={saveBookingLimit}
+                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Enregistrer
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                Les clients peuvent réserver jusqu'à {bookingLimitMonths} mois à l'avance
               </p>
             </section>
 
