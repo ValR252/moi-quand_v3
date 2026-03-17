@@ -1,7 +1,7 @@
 /**
  * Profile Management Page
  * Complete therapist profile editor with photo, bio, contact info, and settings
- * Features: Booking limit + PayPal configuration
+ * Features: PayPal configuration
  */
 
 'use client'
@@ -36,9 +36,9 @@ export default function ProfilePage() {
     booking_enabled: true,
     auto_confirm: false,
     timezone: 'Europe/Zurich',
-    // Feature 1: Booking limit
+    // Booking limit moved to Availability page
     booking_limit_months: 2,
-    // Feature 2: PayPal
+    // PayPal configuration
     paypal_enabled: false,
     paypal_client_id: '',
     paypal_client_secret: '',
@@ -81,9 +81,9 @@ export default function ProfilePage() {
           booking_enabled: data.therapist.booking_enabled ?? true,
           auto_confirm: data.therapist.auto_confirm ?? false,
           timezone: data.therapist.timezone || 'Europe/Zurich',
-          // Feature 1
+          // Booking limit moved to Availability page
           booking_limit_months: data.therapist.booking_limit_months ?? 2,
-          // Feature 2
+          // PayPal configuration
           paypal_enabled: data.therapist.paypal_enabled ?? false,
           paypal_client_id: data.therapist.paypal_client_id || '',
           paypal_client_secret: data.therapist.paypal_client_secret || '',
@@ -507,41 +507,7 @@ export default function ProfilePage() {
             </div>
           </section>
 
-          {/* FEATURE 1: Booking Limit Settings */}
-          <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
-              <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              Limite de réservation
-            </h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  Combien de temps à l'avance les clients peuvent-ils réserver ?
-                </label>
-                <div className="flex items-center gap-4">
-                  <input
-                    type="range"
-                    min="1"
-                    max="12"
-                    value={formData.booking_limit_months}
-                    onChange={(e) => setFormData({ ...formData, booking_limit_months: parseInt(e.target.value) })}
-                    className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-indigo-600"
-                  />
-                  <span className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 min-w-[80px]">
-                    {formData.booking_limit_months} mois
-                  </span>
-                </div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                  Les clients ne pourront pas réserver au-delà de {formData.booking_limit_months} mois à l'avance.
-                </p>
-              </div>
-            </div>
-          </section>
-
-          {/* FEATURE 2: PayPal Configuration */}
+          {/* PayPal Configuration */}
           <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
             <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
               <svg className="w-5 h-5 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
