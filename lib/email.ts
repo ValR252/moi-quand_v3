@@ -29,6 +29,12 @@ export async function sendBookingConfirmationEmail(params: {
   cancellationDeadlineHours: number
   therapistTimezone?: string
   patientTimezone?: string
+  // Zoom integration
+  isOnline?: boolean
+  zoomMeeting?: {
+    joinUrl: string
+    password?: string
+  }
 }) {
   const {
     to,
@@ -41,7 +47,9 @@ export async function sendBookingConfirmationEmail(params: {
     cancellationToken,
     cancellationDeadlineHours,
     therapistTimezone = 'Europe/Zurich',
-    patientTimezone
+    patientTimezone,
+    isOnline,
+    zoomMeeting,
   } = params
 
   const cancellationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/cancel/${cancellationToken}`
@@ -49,7 +57,7 @@ export async function sendBookingConfirmationEmail(params: {
   // Generate calendar links (use patient timezone for their calendar, or therapist timezone if not provided)
   const calendarLinks = generateAllCalendarLinks({
     title: `${sessionLabel} - ${therapistName}`,
-    description: `Rendez-vous avec ${therapistName}\nDurée: ${duration} minutes\nType: ${sessionLabel}`,
+    description: `Rendez-vous avec ${therapistName}\nDurée: ${duration} minutes\nType: ${sessionLabel}${isOnline ? '\nFormat: En ligne (Zoom)' : ''}`,
     startDate: date,
     startTime: time,
     duration: duration,
@@ -76,6 +84,9 @@ export async function sendBookingConfirmationEmail(params: {
             .detail-row:last-child { border-bottom: none; }
             .button { display: inline-block; padding: 12px 24px; background-color: #4F46E5; color: white; text-decoration: none; border-radius: 6px; margin: 10px 0; }
             .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }
+            .online-badge { display: inline-block; background-color: #10B981; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+            .zoom-box { background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 15px; margin: 15px 0; }
+            .zoom-button { display: inline-block; padding: 12px 24px; background-color: #2D8CFF; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; }
           </style>
         </head>
         <body>
@@ -112,7 +123,25 @@ export async function sendBookingConfirmationEmail(params: {
                 <div class="detail-row">
                   <strong>Type de séance :</strong> ${sessionLabel}
                 </div>
+                <div class="detail-row">
+                  <strong>Format :</strong> ${isOnline ? '<span class="online-badge">📹 En ligne (Zoom)</span>' : 'Présentiel'}
+                </div>
               </div>
+
+              ${isOnline && zoomMeeting ? `
+                <div class="zoom-box">
+                  <h3 style="margin-top: 0; color: #111827;">🔗 Lien Zoom pour votre séance</h3>
+                  <p>Rejoignez la réunion en ligne à l'heure prévue :</p>
+                  <a href="${zoomMeeting.joinUrl}" class="zoom-button">Rejoindre la réunion Zoom</a>
+                  ${zoomMeeting.password ? `<p style="margin-top: 10px; font-size: 14px;"><strong>Mot de passe :</strong> ${zoomMeeting.password}</p>` : ''}
+                  <p style="font-size: 12px; color: #6B7280; margin-top: 10px;">Conseil : Testez votre caméra et micro avant le rendez-vous !</p>
+                </div>
+              ` : isOnline ? `
+                <div class="zoom-box">
+                  <h3 style="margin-top: 0; color: #111827;">📹 Séance en ligne</h3>
+                  <p>C'est une séance en ligne. Le lien Zoom vous sera envoyé prochainement par votre thérapeute.</p>
+                </div>
+              ` : ''}
 
               <div style="margin: 30px 0; padding: 20px; background-color: #f0fdf4; border-radius: 8px; text-align: center;">
                 <p style="margin: 0 0 15px 0;"><strong>📅 Ajouter à votre agenda</strong></p>
@@ -338,15 +367,21 @@ export async function sendTransferEmailToPatient(params: {
   duration: number
   newCancellationToken: string
   cancellationDeadlineHours: number
+  // Zoom integration for transfer
+  isOnline?: boolean
+  zoomMeeting?: {
+    joinUrl: string
+    password?: string
+  }
 }) {
-  const { to, patientName, therapistName, oldDate, oldTime, newDate, newTime, sessionLabel, duration, newCancellationToken, cancellationDeadlineHours } = params
+  const { to, patientName, therapistName, oldDate, oldTime, newDate, newTime, sessionLabel, duration, newCancellationToken, cancellationDeadlineHours, isOnline, zoomMeeting } = params
 
   const cancellationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/cancel/${newCancellationToken}`
 
   // Generate calendar links for new appointment
   const calendarLinks = generateAllCalendarLinks({
     title: `${sessionLabel} - ${therapistName}`,
-    description: `Rendez-vous avec ${therapistName}\nDurée: ${duration} minutes\nType: ${sessionLabel}`,
+    description: `Rendez-vous avec ${therapistName}\nDurée: ${duration} minutes\nType: ${sessionLabel}${isOnline ? '\nFormat: En ligne (Zoom)' : ''}`,
     startDate: newDate,
     startTime: newTime,
     duration: duration
@@ -374,6 +409,9 @@ export async function sendTransferEmailToPatient(params: {
             .new-date { color: #059669; font-weight: bold; }
             .button { display: inline-block; padding: 12px 24px; background-color: #0891B2; color: white; text-decoration: none; border-radius: 6px; margin: 10px 0; }
             .footer { text-align: center; color: #6b7280; font-size: 12px; margin-top: 20px; }
+            .online-badge { display: inline-block; background-color: #10B981; color: white; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 500; }
+            .zoom-box { background-color: #F3F4F6; border: 1px solid #D1D5DB; border-radius: 8px; padding: 15px; margin: 15px 0; }
+            .zoom-button { display: inline-block; padding: 12px 24px; background-color: #2D8CFF; color: white; text-decoration: none; border-radius: 6px; font-weight: 500; }
           </style>
         </head>
         <body>
@@ -403,7 +441,25 @@ export async function sendTransferEmailToPatient(params: {
                 <div class="detail-row">
                   <strong>Type de séance :</strong> ${sessionLabel}
                 </div>
+                <div class="detail-row">
+                  <strong>Format :</strong> ${isOnline ? '<span class="online-badge">📹 En ligne (Zoom)</span>' : 'Présentiel'}
+                </div>
               </div>
+
+              ${isOnline && zoomMeeting ? `
+                <div class="zoom-box">
+                  <h3 style="margin-top: 0; color: #111827;">🔗 Nouveau lien Zoom</h3>
+                  <p>Rejoignez la réunion en ligne à l'heure prévue :</p>
+                  <a href="${zoomMeeting.joinUrl}" class="zoom-button">Rejoindre la réunion Zoom</a>
+                  ${zoomMeeting.password ? `<p style="margin-top: 10px; font-size: 14px;"><strong>Mot de passe :</strong> ${zoomMeeting.password}</p>` : ''}
+                  <p style="font-size: 12px; color: #6B7280; margin-top: 10px;">Conseil : Testez votre caméra et micro avant le rendez-vous !</p>
+                </div>
+              ` : isOnline ? `
+                <div class="zoom-box">
+                  <h3 style="margin-top: 0; color: #111827;">📹 Séance en ligne</h3>
+                  <p>C'est une séance en ligne. Le nouveau lien Zoom vous sera envoyé par votre thérapeute.</p>
+                </div>
+              ` : ''}
 
               <div style="margin: 30px 0; padding: 20px; background-color: #f0fdf4; border-radius: 8px; text-align: center;">
                 <p style="margin: 0 0 15px 0;"><strong>📅 Ajouter à votre agenda</strong></p>

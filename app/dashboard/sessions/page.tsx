@@ -25,6 +25,7 @@ export default function SessionsPage() {
     description: '',
     color: '#6366f1',
     max_per_day: '',
+    is_online: false,
   })
   const [saving, setSaving] = useState(false)
 
@@ -54,6 +55,7 @@ export default function SessionsPage() {
       description: '',
       color: '#6366f1',
       max_per_day: '',
+      is_online: false,
     })
     setIsModalOpen(true)
   }
@@ -68,6 +70,7 @@ export default function SessionsPage() {
       description: session.description || '',
       color: session.color || '#6366f1',
       max_per_day: session.max_per_day?.toString() || '',
+      is_online: session.is_online || false,
     })
     setIsModalOpen(true)
   }
@@ -90,6 +93,7 @@ export default function SessionsPage() {
           description: formData.description || null,
           color: formData.color,
           max_per_day: formData.max_per_day ? parseInt(formData.max_per_day) : null,
+          is_online: formData.is_online,
         }),
       })
 
@@ -209,6 +213,10 @@ export default function SessionsPage() {
 
                       {!session.enabled && (
                         <Badge variant="neutral" size="sm">Désactivé</Badge>
+                      )}
+                      
+                      {session.is_online && (
+                        <Badge variant="success" size="sm">📹 En ligne</Badge>
                       )}
                     </div>
 
@@ -369,6 +377,15 @@ export default function SessionsPage() {
                   placeholder="Illimité"
                 />
               </div>
+            </div>
+
+            <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
+              <Toggle
+                checked={formData.is_online}
+                onChange={(checked) => setFormData({ ...formData, is_online: checked })}
+                label="Consultation en ligne"
+                description="Cette séance se déroule en visioconférence (Zoom)"
+              />
             </div>
 
             <ModalActions

@@ -57,6 +57,23 @@ export default function ProfilePage() {
         loadProfile()
       }, 1000)
     }
+
+    // Check for Zoom success/error
+    if (urlParams.get('zoom_success') === 'true') {
+      console.log('Zoom connected successfully! Reloading profile...')
+      setTimeout(() => {
+        loadProfile()
+        // Clean URL
+        window.history.replaceState({}, '', window.location.pathname)
+      }, 1000)
+    }
+    if (urlParams.get('zoom_error')) {
+      const error = urlParams.get('zoom_error')
+      console.error('Zoom connection error:', error)
+      alert(`❌ Erreur de connexion Zoom: ${error}`)
+      // Clean URL
+      window.history.replaceState({}, '', window.location.pathname)
+    }
   }, [])
 
   async function loadProfile() {
@@ -212,6 +229,56 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Error selecting calendar:', error)
       alert('Erreur lors de la sélection')
+    }
+  }
+
+  // Zoom integration handlers
+  async function handleConnectZoom() {
+    try {
+      const response = await fetch('/api/zoom/connect')
+
+      if (response.status === 401) {
+        alert('❌ Session expirée. Veuillez vous reconnecter.')
+        window.location.href = '/login'
+        return
+      }
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        alert(`❌ Erreur ${response.status}: ${errorData.error || 'Erreur inconnue'}`)
+        return
+      }
+
+      const data = await response.json()
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        alert('❌ Aucune URL de connexion reçue')
+      }
+    } catch (error) {
+      console.error('Error connecting Zoom:', error)
+      alert('Erreur lors de la connexion à Zoom')
+    }
+  }
+
+  async function handleDisconnectZoom() {
+    if (!confirm('Voulez-vous vraiment déconnecter Zoom ?')) {
+      return
+    }
+
+    try {
+      const response = await fetch('/api/zoom/disconnect', {
+        method: 'POST'
+      })
+      if (response.ok) {
+        await loadProfile()
+        alert('Zoom déconnecté avec succès')
+      } else {
+        alert('Erreur lors de la déconnexion')
+      }
+    } catch (error) {
+      console.error('Error disconnecting Zoom:', error)
+      alert('Erreur lors de la déconnexion')
     }
   }
 
@@ -812,6 +879,83 @@ export default function ProfilePage() {
               </button>
             </div>
           </div>
+        )}
+
+        {/* ZOOM SECTION */}
+        {therapist && (
+          <section className="mt-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl">
+                  <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M4.585 15.15v2.985c0 1.657 1.343 3 3 3h9.83c1.657 0 3-1.343 3-3v-2.985c0-1.657-1.343-3-3-3h-9.83c-1.657 0-3 1.343-3 3zm1.5 0c0-.828.672-1.5 1.5-1.5h9.83c.828 0 1.5.672 1.5 1.5v2.985c0 .828-.672 1.5-1.5 1.5h-9.83c-.828 0-1.5-.672-1.5-1.5v-2.985z"/>
+                    <path d="M17.5 12.465V6.015c0-1.657-1.343-3-3-3h-9.83c-1.657 0-3 1.343-3 3v6.45c0 1.657 1.343 3 3 3h1.25v1.5H4.67c-2.622 0-4.75-2.128-4.75-4.75V6.015c0-2.622 2.128-4.75 4.75-4.75h9.83c2.622 0 4.75 2.128 4.75 4.75v4.7l2.54-2.54c.585-.585 1.585-.17 1.585.825v4.25c0 1.38-1.12 2.5-2.5 2.5h-.915v-1.5h.415c.276 0 .5-.224.5-.5v-2.086l-1.54 1.54-.75-.75z"/>
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+                    Vidéo / Zoom
+                  </h2>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Proposez des consultations en ligne
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              {therapist.zoom_connected ? (
+                <div className="space-y-4">
+                  <div className="p-4 bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-950/20 dark:to-cyan-950/20 rounded-xl border border-blue-200 dark:border-blue-800">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2 bg-blue-500 rounded-lg">
+                        <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-blue-900 dark:text-blue-100">
+                            Zoom connecté
+                          </h3>
+                        </div>
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          {therapist.zoom_email || 'Votre compte Zoom est connecté'}
+                        </p>
+                        <p className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                          Les liens Zoom seront créés automatiquement pour vos séances en ligne
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleDisconnectZoom}
+                    className="w-full px-4 py-3 bg-white text-red-600 hover:bg-red-50 rounded-xl transition-all font-medium border-2 border-red-200"
+                  >
+                    Déconnecter Zoom
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="p-4 bg-gray-50 dark:bg-gray-700/50 rounded-xl border border-gray-200 dark:border-gray-700">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">
+                      Connectez votre compte Zoom Pro pour proposer des consultations en ligne. 
+                      Les liens de réunion seront créés automatiquement et envoyés aux patients.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleConnectZoom}
+                    className="w-full px-6 py-4 bg-gradient-to-r from-blue-600 to-cyan-500 text-white rounded-xl transition-all font-semibold"
+                  >
+                    Connecter avec Zoom
+                  </button>
+                </div>
+              )}
+            </div>
+          </section>
         )}
       </div>
     </DashboardLayout>

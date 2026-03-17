@@ -58,6 +58,13 @@ export type Therapist = {
   paypal_client_secret?: string | null
   paypal_webhook_id?: string | null
   paypal_environment?: 'sandbox' | 'production'
+  // Feature 3: Zoom video meetings
+  zoom_connected?: boolean
+  zoom_access_token?: string | null
+  zoom_refresh_token?: string | null
+  zoom_token_expiry?: string | null
+  zoom_user_id?: string | null
+  zoom_email?: string | null
 }
 
 export type Session = {
@@ -74,6 +81,8 @@ export type Session = {
   color?: string
   max_per_day?: number | null
   display_order?: number
+  // Zoom integration
+  is_online?: boolean
 }
 
 export type Schedule = {
@@ -142,4 +151,9 @@ export type Booking = {
   paypal_order_id?: string | null
   paypal_capture_id?: string | null
   paypal_refund_id?: string | null
+  // Feature 3: Zoom video meetings
+  is_online?: boolean
+  zoom_meeting_id?: string | null
+  zoom_join_url?: string | null
+  zoom_start_url?: string | null
 }
