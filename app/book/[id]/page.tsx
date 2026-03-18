@@ -462,30 +462,111 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                 )}
               </div>
               
-              {/* Feature 1: Show limited dates */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
-                {availableDates.map((date) => (
-                  <button
-                    key={date.toISOString()}
-                    type="button"
-                    onClick={() => setSelectedDate(date)}
-                    className={`p-4 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${
-                      selectedDate?.toDateString() === date.toDateString()
-                        ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 shadow-lg'
-                        : 'border-gray-200 dark:border-gray-700 hover:border-indigo-300'
-                    }`}
-                  >
-                    <div className="text-xs text-gray-500 mb-1">
-                      {format(date, 'EEE', { locale: fr })}
-                    </div>
-                    <div className="text-2xl font-bold">
-                      {format(date, 'd')}
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {format(date, 'MMM', { locale: fr })}
-                    </div>
-                  </button>
-                ))}
+              {/* Feature 1: Show limited dates - Grouped by month with headers */}
+              <div className="space-y-6">
+                {(() => {
+                  // Group dates by month
+                  const groupedDates: { [key: string]: Date[] } = {}
+                  const today = new Date()
+                  const currentMonth = today.getMonth()
+                  const currentYear = today.getFullYear()
+                  
+                  availableDates.forEach((date) => {
+                    const monthKey = format(date, 'yyyy-MM', { locale: fr })
+                    if (!groupedDates[monthKey]) {
+                      groupedDates[monthKey] = []
+                    }
+                    groupedDates[monthKey].push(date)
+                  })
+                  
+                  return Object.entries(groupedDates).map(([monthKey, dates]) => {
+                    const [year, month] = monthKey.split('-').map(Number)
+                    const isCurrentMonth = month - 1 === currentMonth && year === currentYear
+                    const monthLabel = format(dates[0], 'MMMM yyyy', { locale: fr })
+                    
+                    return (
+                      <div key={monthKey} className="space-y-3">
+                        {/* Month Header - More visible for current month */}
+                        <div className={`flex items-center gap-3 py-2 px-4 rounded-lg ${
+                          isCurrentMonth 
+                            ? 'bg-indigo-100 dark:bg-indigo-900/50 border-l-4 border-indigo-600' 
+                            : 'bg-gray-100 dark:bg-gray-800/50 border-l-4 border-gray-400'
+                        }`}>
+                          <span className={`text-lg font-bold ${
+                            isCurrentMonth 
+                              ? 'text-indigo-800 dark:text-indigo-200' 
+                              : 'text-gray-600 dark:text-gray-400'
+                          }`}>
+                            {isCurrentMonth ? '📅 ' : ''}{monthLabel.charAt(0).toUpperCase() + monthLabel.slice(1)}
+                          </span>
+                          {isCurrentMonth && (
+                            <span className="text-xs font-medium px-2 py-1 bg-indigo-600 text-white rounded-full">
+                              Ce mois
+                            </span>
+                          )}
+                        </div>
+                        
+                        {/* Dates grid for this month */}
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+                          {dates.map((date) => {
+                            const isSelected = selectedDate?.toDateString() === date.toDateString()
+                            const isPast = date < startOfDay(today)
+                            
+                            return (
+                              <button
+                                key={date.toISOString()}
+                                type="button"
+                                onClick={() => setSelectedDate(date)}
+                                disabled={isPast}
+                                className={`p-4 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${
+                                  isSelected
+                                    ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 shadow-lg'
+                                    : isPast
+                                      ? 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 opacity-50 cursor-not-allowed'
+                                      : isCurrentMonth
+                                        ? 'border-indigo-200 dark:border-indigo-800 bg-white dark:bg-gray-800 hover:border-indigo-400'
+                                        : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'
+                                }`}
+                              >
+                                <div className={`text-xs mb-1 ${
+                                  isSelected 
+                                    ? 'text-indigo-600 dark:text-indigo-400' 
+                                    : isPast 
+                                      ? 'text-gray-400 dark:text-gray-600'
+                                      : isCurrentMonth
+                                        ? 'text-indigo-500 dark:text-indigo-400 font-medium'
+                                        : 'text-gray-500 dark:text-gray-400'
+                                }`}>
+                                  {format(date, 'EEE', { locale: fr })}
+                                </div>
+                                <div className={`text-2xl font-bold ${
+                                  isSelected 
+                                    ? 'text-indigo-700 dark:text-indigo-300' 
+                                    : isPast 
+                                      ? 'text-gray-400 dark:text-gray-600'
+                                      : isCurrentMonth
+                                        ? 'text-gray-900 dark:text-white'
+                                        : 'text-gray-700 dark:text-gray-300'
+                                }`}>
+                                  {format(date, 'd')}
+                                </div>
+                                <div className={`text-xs ${
+                                  isSelected 
+                                    ? 'text-indigo-500 dark:text-indigo-400' 
+                                    : isPast 
+                                      ? 'text-gray-300 dark:text-gray-700'
+                                      : 'text-gray-400 dark:text-gray-500'
+                                }`}>
+                                  {format(date, 'MMM', { locale: fr })}
+                                </div>
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
               </div>
               
               {availableDates.length === 0 && (
