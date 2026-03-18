@@ -60,7 +60,7 @@ export default function BottomNav({ newBookingsCount, onMoreClick }: BottomNavPr
 
         {/* Notifications */}
         <Link
-          href="/dashboard"
+          href="/dashboard/notifications"
           className={`flex flex-col items-center justify-center flex-1 h-full transition-colors relative ${
             isActive('/dashboard/notifications')
               ? 'text-indigo-600 dark:text-indigo-400'

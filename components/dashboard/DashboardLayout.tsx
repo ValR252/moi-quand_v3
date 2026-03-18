@@ -169,9 +169,9 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {/* Theme Toggle */}
               <ThemeToggle />
 
-              {/* Notification bell - Navigate to bookings (desktop only) */}
+              {/* Notification bell - Navigate to notifications */}
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/dashboard/notifications')}
                 className="hidden lg:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative transition-all hover:scale-105 active:scale-95"
                 aria-label={`Notifications${newBookingsCount > 0 ? ` - ${newBookingsCount} nouveaux rendez-vous` : ''}`}
               >
@@ -205,7 +205,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
               {/* Notification bell */}
               <button
-                onClick={() => router.push('/dashboard')}
+                onClick={() => router.push('/dashboard/notifications')}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative transition-all hover:scale-105 active:scale-95"
                 aria-label={`Notifications${newBookingsCount > 0 ? ` - ${newBookingsCount} nouveaux rendez-vous` : ''}`}
               >
