@@ -19,64 +19,43 @@ interface MobileCardProps extends HTMLAttributes<HTMLDivElement> {
   onClick?: () => void
 }
 
-const MobileCard = forwardRef<HTMLDivElement & HTMLAnchorElement, MobileCardProps>(
-  ({ 
-    children, 
-    interactive = false, 
+const MobileCard = forwardRef<HTMLDivElement, MobileCardProps>(
+  ({
+    children,
+    interactive = false,
     variant = 'default',
     padding = 'md',
     href,
     onClick,
     className,
-    ...props 
+    ...props
   }, ref) => {
     const baseStyles = cn(
       // Base styles
       'rounded-2xl transition-all duration-200',
-      
+
       // Padding
       padding === 'sm' && 'p-4',
       padding === 'md' && 'p-5',
       padding === 'lg' && 'p-6',
-      
+
       // Variant styles
-      variant === 'default' && [
-        'bg-white dark:bg-gray-800',
-        'border border-gray-100 dark:border-gray-700',
-        'shadow-sm dark:shadow-none',
-      ],
-      variant === 'elevated' && [
-        'bg-white dark:bg-gray-800',
-        'border border-gray-100 dark:border-gray-700',
-        'shadow-md shadow-gray-200/50 dark:shadow-gray-900/50',
-      ],
-      variant === 'glass' && [
-        'bg-white/80 dark:bg-gray-800/60',
-        'backdrop-blur-xl',
-        'border border-white/20 dark:border-gray-700/50',
-        'shadow-lg shadow-gray-200/30 dark:shadow-black/30',
-      ],
-      
+      variant === 'default' && 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm dark:shadow-none',
+      variant === 'elevated' && 'bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-md shadow-gray-200/50 dark:shadow-gray-900/50',
+      variant === 'glass' && 'bg-white/80 dark:bg-gray-800/60 backdrop-blur-xl border border-white/20 dark:border-gray-700/50 shadow-lg shadow-gray-200/30 dark:shadow-black/30',
+
       // Interactive states
-      interactive && [
-        'cursor-pointer',
-        'active:scale-[0.98]',
-        'hover:shadow-md dark:hover:shadow-gray-900/50',
-        'hover:border-gray-200 dark:hover:border-gray-600',
-        'transition-transform',
-      ],
-      
+      interactive && 'cursor-pointer active:scale-[0.98] hover:shadow-md dark:hover:shadow-gray-900/50 hover:border-gray-200 dark:hover:border-gray-600 transition-transform',
+
       // Custom classes
       className
     )
 
     if (href) {
       return (
-        <a 
-          ref={ref as React.Ref<HTMLAnchorElement>}
-          href={href} 
-          className={cn(baseStyles, 'block')} 
-          {...props}
+        <a
+          href={href}
+          className={cn(baseStyles, 'block')}
         >
           {children}
         </a>
@@ -84,10 +63,10 @@ const MobileCard = forwardRef<HTMLDivElement & HTMLAnchorElement, MobileCardProp
     }
 
     return (
-      <div 
-        ref={ref as React.Ref<HTMLDivElement>}
+      <div
+        ref={ref}
         onClick={onClick}
-        className={baseStyles} 
+        className={baseStyles}
         {...props}
       >
         {children}
