@@ -43,7 +43,7 @@ export default function AvailabilityPage() {
 
   async function loadData() {
     try {
-      const [schedulesRes, holidaysRes, therapistRes] = await Promise.all([
+      const [schedulesRes, holidaysRes, configRes] = await Promise.all([
         fetch('/api/schedules'),
         fetch('/api/holidays'),
         fetch('/api/therapist'),
@@ -51,14 +51,12 @@ export default function AvailabilityPage() {
 
       const schedulesData = await schedulesRes.json()
       const holidaysData = await holidaysRes.json()
-      const therapistData = await therapistRes.json()
+      const configData = await configRes.json()
 
       setSchedules(schedulesData.schedules || [])
       setHolidays(holidaysData.holidays || [])
-      
-      if (therapistData.therapist) {
-        setNoticeHours(therapistData.therapist.notice_hours ?? 2)
-        setBookingLimitMonths(therapistData.therapist.booking_limit_months ?? 2)
+      if (configData.therapist) {
+        setBookingLimitMonths(configData.therapist.booking_limit_months ?? 2)
       }
     } catch (error) {
       console.error('Error loading data:', error)
@@ -163,14 +161,19 @@ export default function AvailabilityPage() {
 
   async function saveBookingLimit() {
     try {
-      await fetch('/api/config', {
+      const res = await fetch('/api/config', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ booking_limit_months: bookingLimitMonths }),
       })
-      alert('Limite de réservation enregistrée')
+      if (res.ok) {
+        alert('Limite de réservation enregistrée')
+      } else {
+        alert('Erreur lors de la sauvegarde')
+      }
     } catch (error) {
       console.error('Error saving booking limit:', error)
+      alert('Erreur lors de la sauvegarde')
     }
   }
 
@@ -285,33 +288,42 @@ export default function AvailabilityPage() {
 
             {/* Booking Limit */}
             <section className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
                 Limite de réservation
               </h2>
 
-              <div className="flex items-center gap-4">
-                <input
-                  type="range"
-                  min="1"
-                  max="12"
-                  value={bookingLimitMonths}
-                  onChange={(e) => setBookingLimitMonths(parseInt(e.target.value))}
-                  className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-indigo-600"
-                />
-                <span className="w-24 text-center font-medium text-indigo-600 dark:text-indigo-400">
-                  {bookingLimitMonths} mois
-                </span>
-                <button
-                  onClick={saveBookingLimit}
-                  className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-                >
-                  Enregistrer
-                </button>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                    Combien de temps à l'avance les clients peuvent-ils réserver ?
+                  </label>
+                  <div className="flex items-center gap-4">
+                    <input
+                      type="range"
+                      min="1"
+                      max="12"
+                      value={bookingLimitMonths}
+                      onChange={(e) => setBookingLimitMonths(parseInt(e.target.value))}
+                      className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 accent-indigo-600"
+                    />
+                    <span className="text-lg font-semibold text-indigo-600 dark:text-indigo-400 min-w-[80px]">
+                      {bookingLimitMonths} mois
+                    </span>
+                    <button
+                      onClick={saveBookingLimit}
+                      className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                    >
+                      Enregistrer
+                    </button>
+                  </div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                    Les clients ne pourront pas réserver au-delà de {bookingLimitMonths} mois à l'avance.
+                  </p>
+                </div>
               </div>
-
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
-                Les clients peuvent réserver jusqu'à {bookingLimitMonths} mois à l'avance
-              </p>
             </section>
 
             {/* Holidays */}
