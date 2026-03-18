@@ -1,6 +1,6 @@
 /**
  * Dashboard Layout Component
- * Frontend Architect: Responsive dashboard layout with sidebar navigation
+ * Frontend Architect: Responsive dashboard layout with sidebar (desktop) and bottom nav (mobile)
  *
  * Usage:
  *   <DashboardLayout>
@@ -14,6 +14,8 @@ import { ReactNode, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import ThemeToggle from '@/components/ThemeToggle'
+import BottomNav from './BottomNav'
+import MoreMenu from './MoreMenu'
 
 interface DashboardLayoutProps {
   children: ReactNode
@@ -37,8 +39,8 @@ const navItems: NavItem[] = [
 ]
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [newBookingsCount, setNewBookingsCount] = useState(0)
+  const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -65,24 +67,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar */}
+      {/* Sidebar - DESKTOP ONLY */}
       <aside
-        className={`
-          fixed top-0 left-0 z-50 h-full w-64
+        className="fixed top-0 left-0 z-50 h-full w-64
           bg-white dark:bg-gray-800
           border-r border-gray-200 dark:border-gray-700
-          transform transition-transform duration-300 ease-in-out
-          lg:translate-x-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}
-        `}
+          hidden lg:block"
       >
         {/* Logo */}
         <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
@@ -92,16 +82,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           >
             moi-quand
           </Link>
-
-          {/* Close button (mobile) */}
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         {/* Navigation */}
@@ -113,7 +93,6 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setSidebarOpen(false)}
                 className={`
                   flex items-center gap-3 px-4 py-3 rounded-lg
                   font-medium transition-colors
@@ -150,33 +129,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Header */}
+        {/* Header - Simplified on mobile */}
         <header className="h-16 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
           <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-            {/* Mobile menu button */}
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-            >
-              <svg className="w-6 h-6 text-gray-900 dark:!text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
-
             {/* Page title */}
             <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               {navItems.find((item) => item.href === pathname)?.label || 'Dashboard'}
             </h1>
 
-            {/* Right section (notifications, profile, etc.) */}
+            {/* Right section (notifications, theme) */}
             <div className="flex items-center gap-2">
               {/* Theme Toggle */}
               <ThemeToggle />
 
-              {/* Notification bell - Navigate to bookings */}
+              {/* Notification bell - Navigate to bookings (desktop only) */}
               <button
                 onClick={() => router.push('/dashboard')}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative transition-all hover:scale-105 active:scale-95"
+                className="hidden lg:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative transition-all hover:scale-105 active:scale-95"
                 aria-label={`Notifications${newBookingsCount > 0 ? ` - ${newBookingsCount} nouveaux rendez-vous` : ''}`}
               >
                 <svg className="w-6 h-6 text-gray-900 dark:!text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -194,11 +163,23 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </div>
         </header>
 
-        {/* Page content */}
-        <main className="p-4 sm:p-6 lg:p-8">
+        {/* Page content - Add padding bottom on mobile for bottom nav */}
+        <main className="p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8">
           {children}
         </main>
       </div>
+
+      {/* Bottom Navigation - MOBILE ONLY */}
+      <BottomNav 
+        newBookingsCount={newBookingsCount} 
+        onMoreClick={() => setIsMoreMenuOpen(true)} 
+      />
+
+      {/* More Menu (Bottom Sheet) - MOBILE ONLY */}
+      <MoreMenu 
+        isOpen={isMoreMenuOpen} 
+        onClose={() => setIsMoreMenuOpen(false)} 
+      />
     </div>
   )
 }

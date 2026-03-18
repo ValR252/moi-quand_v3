@@ -133,4 +133,13 @@
   .elevation-3 {
     @apply shadow-elevation-3 dark:shadow-elevation-dark-3;
   }
+
+  /* Safe area utilities for mobile devices with notches */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .h-safe-area-inset-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+  }
 }
