@@ -160,32 +160,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Mobile Header - with menu button for mobile */}
+        {/* Mobile Header - sans menu hamburger, sans notifications */}
         <MobileHeader 
           title={pageTitle}
-          onMenuClick={() => setSidebarOpen(true)}
           rightAction={
             <div className="flex items-center gap-2">
-              {/* Theme Toggle */}
+              {/* Theme Toggle uniquement */}
               <ThemeToggle />
-
-              {/* Notification bell - Navigate to notifications */}
-              <button
-                onClick={() => router.push('/dashboard/notifications')}
-                className="hidden lg:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative transition-all hover:scale-105 active:scale-95"
-                aria-label={`Notifications${newBookingsCount > 0 ? ` - ${newBookingsCount} nouveaux rendez-vous` : ''}`}
-              >
-                <svg className="w-6 h-6 text-gray-900 dark:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-
-                {/* Notification badge with count */}
-                {newBookingsCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[20px] h-5 px-1.5 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg animate-pulse">
-                    {newBookingsCount > 99 ? '99+' : newBookingsCount}
-                  </span>
-                )}
-              </button>
             </div>
           }
         />

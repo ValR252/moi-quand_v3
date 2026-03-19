@@ -15,8 +15,7 @@ import {
   Calendar, 
   Layers, 
   Bell, 
-  Settings, 
-  User 
+  MoreHorizontal 
 } from 'lucide-react'
 
 interface NavItem {
@@ -29,8 +28,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard', label: 'RDV', icon: Calendar },
   { href: '/dashboard/sessions', label: 'Séances', icon: Layers },
   { href: '/dashboard/notifications', label: 'Notif', icon: Bell },
-  { href: '/dashboard/settings', label: 'Param', icon: Settings },
-  { href: '/dashboard/profile', label: 'Profil', icon: User },
+  { href: '/dashboard/settings', label: 'Plus', icon: MoreHorizontal },
 ]
 
 export default function BottomNav() {
