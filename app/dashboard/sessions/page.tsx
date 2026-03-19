@@ -28,6 +28,7 @@ export default function SessionsPage() {
     is_online: false,
   })
   const [saving, setSaving] = useState(false)
+  const [nameError, setNameError] = useState('')
 
   useEffect(() => {
     loadSessions()
@@ -57,6 +58,7 @@ export default function SessionsPage() {
       max_per_day: '',
       is_online: false,
     })
+    setNameError('')
     setIsModalOpen(true)
   }
 
@@ -72,10 +74,18 @@ export default function SessionsPage() {
       max_per_day: session.max_per_day?.toString() || '',
       is_online: session.is_online || false,
     })
+    setNameError('')
     setIsModalOpen(true)
   }
 
   async function handleSubmit() {
+    // Validation côté client : champ Nom obligatoire
+    if (!formData.name.trim()) {
+      setNameError('Le nom du type de séance est obligatoire')
+      return
+    }
+    setNameError('')
+
     setSaving(true)
 
     try {
@@ -299,11 +309,24 @@ export default function SessionsPage() {
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                onChange={(e) => {
+                  setFormData({ ...formData, name: e.target.value })
+                  if (e.target.value.trim()) {
+                    setNameError('')
+                  }
+                }}
+                className={`w-full px-4 py-2 border rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent ${
+                  nameError
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                    : 'border-gray-300 dark:border-gray-600'
+                }`}
                 placeholder="Ex: Consultation initiale"
-                required
               />
+              {nameError && (
+                <p className="mt-1 text-sm text-red-600 dark:text-red-400">
+                  {nameError}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-4">
