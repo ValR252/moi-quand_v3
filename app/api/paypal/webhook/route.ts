@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import crypto from 'crypto'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // PayPal API base URLs
 const PAYPAL_BASE_URLS = {
@@ -96,7 +91,7 @@ async function handlePaymentCompleted(resource: any) {
   const captureId = resource.purchase_units?.[0]?.payments?.captures?.[0]?.id
 
   // Trouver la réservation associée
-  const { data: bookings, error } = await supabase
+  const { data: bookings, error } = await supabaseAdmin
     .from('bookings')
     .select('id')
     .eq('paypal_order_id', orderId)
@@ -108,7 +103,7 @@ async function handlePaymentCompleted(resource: any) {
 
   // Mettre à jour toutes les réservations associées (normalement une seule)
   for (const booking of bookings) {
-    await supabase
+    await supabaseAdmin
       .from('bookings')
       .update({
         payment_status: 'paid',
@@ -124,7 +119,7 @@ async function handlePaymentCompleted(resource: any) {
 async function handlePaymentFailed(resource: any, reason: string) {
   const orderId = resource.id
 
-  const { data: bookings } = await supabase
+  const { data: bookings } = await supabaseAdmin
     .from('bookings')
     .select('id')
     .eq('paypal_order_id', orderId)
@@ -132,7 +127,7 @@ async function handlePaymentFailed(resource: any, reason: string) {
   if (!bookings || bookings.length === 0) return
 
   for (const booking of bookings) {
-    await supabase
+    await supabaseAdmin
       .from('bookings')
       .update({
         payment_status: 'cancelled',
@@ -147,7 +142,7 @@ async function handlePaymentFailed(resource: any, reason: string) {
 async function handlePaymentPending(resource: any) {
   const orderId = resource.id
 
-  const { data: bookings } = await supabase
+  const { data: bookings } = await supabaseAdmin
     .from('bookings')
     .select('id')
     .eq('paypal_order_id', orderId)
@@ -164,7 +159,7 @@ async function handlePaymentRefunded(resource: any) {
   const captureId = resource.id
   const refundId = resource.id
 
-  const { data: bookings } = await supabase
+  const { data: bookings } = await supabaseAdmin
     .from('bookings')
     .select('id')
     .eq('paypal_capture_id', captureId)
@@ -172,7 +167,7 @@ async function handlePaymentRefunded(resource: any) {
   if (!bookings || bookings.length === 0) return
 
   for (const booking of bookings) {
-    await supabase
+    await supabaseAdmin
       .from('bookings')
       .update({
         refund_status: 'processed',
@@ -189,7 +184,7 @@ async function handlePaymentRefunded(resource: any) {
 async function handleOrderCancelled(resource: any) {
   const orderId = resource.id
 
-  const { data: bookings } = await supabase
+  const { data: bookings } = await supabaseAdmin
     .from('bookings')
     .select('id')
     .eq('paypal_order_id', orderId)
@@ -197,7 +192,7 @@ async function handleOrderCancelled(resource: any) {
   if (!bookings || bookings.length === 0) return
 
   for (const booking of bookings) {
-    await supabase
+    await supabaseAdmin
       .from('bookings')
       .update({
         payment_status: 'cancelled',

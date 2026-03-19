@@ -1,11 +1,6 @@
 // Google Calendar API Configuration & Helpers
 import { google } from 'googleapis'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin as supabase } from '@/lib/supabase-server'
 
 // OAuth2 Client Configuration
 export function getOAuth2Client() {

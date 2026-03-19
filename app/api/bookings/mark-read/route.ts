@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { supabaseAdmin } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Mark all unread bookings as viewed
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('bookings')
       .update({ viewed_at: new Date().toISOString() })
       .eq('therapist_id', user.id)

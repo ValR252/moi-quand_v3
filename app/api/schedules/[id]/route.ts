@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { getAuthenticatedUserId } from '@/lib/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 /**
  * DELETE /api/schedules/[id]
@@ -24,7 +19,7 @@ export async function DELETE(
     }
 
     // Verify ownership
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('schedules')
       .select('therapist_id')
       .eq('id', id)
@@ -34,7 +29,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('schedules')
       .delete()
       .eq('id', id)

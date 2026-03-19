@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { getAuthenticatedUserId } from '@/lib/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 /**
  * GET /api/bookings?status=pending&limit=50
@@ -20,7 +15,7 @@ export async function GET(request: NextRequest) {
 
     // For public booking page
     if (therapist_id) {
-      const { data: bookings, error } = await supabase
+      const { data: bookings, error } = await supabaseAdmin
         .from('bookings')
         .select('*')
         .eq('therapist_id', therapist_id)
@@ -38,7 +33,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('bookings')
       .select('*, sessions(name, label, duration, price)')
       .eq('therapist_id', authTherapistId)

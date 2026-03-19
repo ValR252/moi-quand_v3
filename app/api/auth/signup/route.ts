@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { supabaseAdmin } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -39,7 +40,7 @@ export async function POST(request: NextRequest) {
 
     if (authData.user) {
       // Créer le profil thérapeute
-      const { error: profileError } = await supabase.from('therapists').insert({
+      const { error: profileError } = await supabaseAdmin.from('therapists').insert({
         id: authData.user.id,
         email: authData.user.email!,
         name: email.split('@')[0],

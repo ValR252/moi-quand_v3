@@ -4,20 +4,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { getAuthenticatedUserId } from '@/lib/auth'
-
-// Server-side Supabase client with service role
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
 
 // Input validation types
 type CancellationPolicy = 'refund' | 'transfer' | 'both'
@@ -58,7 +46,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Get therapist by user ID
-    const { data: therapist, error: therapistError } = await supabase
+    const { data: therapist, error: therapistError } = await supabaseAdmin
       .from('therapists')
       .select('id')
       .eq('id', userId)
@@ -72,7 +60,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Update cancellation settings
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('therapists')
       .update({
         cancellation_enabled: body.cancellation_enabled,

@@ -9,13 +9,8 @@
  * 5. Minimum notice period (from `therapists.notice_hours`)
  */
 
-import { createClient } from '@supabase/supabase-js'
 import { getGoogleCalendarBusyTimes, hasGoogleCalendarConnected } from './google-calendar'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin as supabase } from '@/lib/supabase-server'
 
 /**
  * MAIN FUNCTION: Get available time slots for a therapist on a specific date

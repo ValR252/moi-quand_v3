@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { getAuthenticatedUserId } from '@/lib/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 /**
  * PATCH /api/sessions/[id]
@@ -26,7 +21,7 @@ export async function PATCH(
     const body = await request.json()
 
     // Verify ownership
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('sessions')
       .select('therapist_id')
       .eq('id', id)
@@ -36,7 +31,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    const { data: session, error } = await supabase
+    const { data: session, error } = await supabaseAdmin
       .from('sessions')
       .update(body)
       .eq('id', id)
@@ -72,7 +67,7 @@ export async function DELETE(
     }
 
     // Verify ownership
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('sessions')
       .select('therapist_id')
       .eq('id', id)
@@ -82,7 +77,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('sessions')
       .delete()
       .eq('id', id)

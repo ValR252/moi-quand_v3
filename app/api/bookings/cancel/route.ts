@@ -4,21 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { deleteCalendarEvent } from '@/lib/google-calendar'
 import { sendCancellationEmailToPatient, sendCancellationEmailToTherapist } from '@/lib/email'
-
-// Server-side Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
 
 interface CancelBookingRequest {
   booking_id: string
@@ -41,7 +29,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get session from cookie
-    const { data: { user }, error: authError } = await supabase.auth.getUser(
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
       authHeader.split('sb-access-token=')[1]?.split(';')[0]
     )
 
@@ -63,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get therapist by email
-    const { data: therapist, error: therapistError } = await supabase
+    const { data: therapist, error: therapistError } = await supabaseAdmin
       .from('therapists')
       .select('id')
       .eq('email', user.email)
@@ -77,7 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get booking with session and therapist details
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await supabaseAdmin
       .from('bookings')
       .select(`
         *,
@@ -110,7 +98,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update booking status
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('bookings')
       .update({
         status: 'cancelled',

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 
 /**
  * Test endpoint to verify Supabase connection and data access
@@ -24,14 +24,8 @@ export async function GET() {
       })
     }
 
-    // Test 2: Try to connect with service role
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
-
-    // Test 3: Try to read schedules
-    const { data: schedules, error: schedError } = await supabase
+    // Test 2: Try to read schedules
+    const { data: schedules, error: schedError } = await supabaseAdmin
       .from('schedules')
       .select('*')
       .eq('therapist_id', 'da067f75-f9c1-45e4-bece-d1d7f5c51e59')
@@ -47,7 +41,7 @@ export async function GET() {
     }
 
     // Test 4: Try to read therapist
-    const { data: therapist, error: therapistError } = await supabase
+    const { data: therapist, error: therapistError } = await supabaseAdmin
       .from('therapists')
       .select('id, name, email, notice_hours')
       .eq('id', 'da067f75-f9c1-45e4-bece-d1d7f5c51e59')

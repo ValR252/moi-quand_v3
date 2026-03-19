@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { getAuthenticatedUserId } from '@/lib/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 /**
  * PATCH /api/bookings/[id]
@@ -26,7 +21,7 @@ export async function PATCH(
     const body = await request.json()
 
     // Verify ownership
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('bookings')
       .select('therapist_id')
       .eq('id', id)
@@ -37,7 +32,7 @@ export async function PATCH(
     }
 
     // Update booking
-    const { data: booking, error } = await supabase
+    const { data: booking, error } = await supabaseAdmin
       .from('bookings')
       .update(body)
       .eq('id', id)
@@ -73,7 +68,7 @@ export async function DELETE(
     }
 
     // Verify ownership
-    const { data: existing } = await supabase
+    const { data: existing } = await supabaseAdmin
       .from('bookings')
       .select('therapist_id')
       .eq('id', id)
@@ -84,7 +79,7 @@ export async function DELETE(
     }
 
     // Mark as cancelled instead of deleting
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('bookings')
       .update({
         status: 'cancelled',

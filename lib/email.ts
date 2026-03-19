@@ -7,8 +7,8 @@ import { Resend } from 'resend'
 import { generateAllCalendarLinks } from './calendar-links'
 import { convertTimeToPatientTZ, formatTimeWithLabel, getTimezoneLabel } from './timezone-helper'
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Initialize Resend client (fallback for build-time when env vars are absent)
+const resend = new Resend(process.env.RESEND_API_KEY || 're_placeholder')
 
 // Email sender configuration
 const FROM_EMAIL = process.env.FROM_EMAIL || process.env.RESEND_FROM_EMAIL || 'noreply@moi-quand.com'

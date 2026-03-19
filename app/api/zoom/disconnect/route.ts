@@ -5,12 +5,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { disconnectZoom } from '@/lib/zoom'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin } from '@/lib/supabase-server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,7 +19,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify session
-    const { data: sessionData, error: sessionError } = await supabase
+    const { data: sessionData, error: sessionError } = await supabaseAdmin
       .from('sessions')
       .select('therapist_id')
       .eq('token', sessionToken)

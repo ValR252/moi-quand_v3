@@ -1,15 +1,10 @@
 // API Route: Create a booking and auto-sync to Google Calendar + Zoom for online sessions
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { autoSyncBooking } from '@/lib/booking-sync'
 import { sendBookingConfirmationEmail } from '@/lib/email'
 import { createZoomMeeting, hasZoomConnected } from '@/lib/zoom'
 import crypto from 'crypto'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,7 +35,7 @@ export async function POST(request: NextRequest) {
     const cancellationToken = crypto.randomBytes(32).toString('hex')
 
     // Get therapist timezone and session info first
-    const { data: therapistData } = await supabase
+    const { data: therapistData } = await supabaseAdmin
       .from('therapists')
       .select('name, cancellation_deadline_hours, timezone')
       .eq('id', therapist_id)
@@ -49,7 +44,7 @@ export async function POST(request: NextRequest) {
     const therapistTimezone = therapistData?.timezone || 'Europe/Zurich'
 
     // Get session details (including is_online)
-    const { data: sessionData } = await supabase
+    const { data: sessionData } = await supabaseAdmin
       .from('sessions')
       .select('label, duration, is_online')
       .eq('id', session_id)
@@ -113,7 +108,7 @@ export async function POST(request: NextRequest) {
 
     // Create booking in Supabase
     // Note: time is stored in therapist's timezone
-    const { data: booking, error } = await supabase
+    const { data: booking, error } = await supabaseAdmin
       .from('bookings')
       .insert(bookingData)
       .select()

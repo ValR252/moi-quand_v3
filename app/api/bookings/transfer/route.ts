@@ -4,21 +4,10 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { deleteCalendarEvent, createCalendarEvent } from '@/lib/google-calendar'
 import { sendTransferEmailToPatient, sendCancellationEmailToTherapist } from '@/lib/email'
 import crypto from 'crypto'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
 
 interface TransferRequest {
   token: string
@@ -42,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get original booking with all related data
-    const { data: originalBooking, error: bookingError } = await supabase
+    const { data: originalBooking, error: bookingError } = await supabaseAdmin
       .from('bookings')
       .select(`
         *,
@@ -146,7 +135,7 @@ export async function POST(request: NextRequest) {
     const newCancellationToken = crypto.randomBytes(32).toString('hex')
 
     // Create new booking
-    const { data: newBooking, error: createError } = await supabase
+    const { data: newBooking, error: createError } = await supabaseAdmin
       .from('bookings')
       .insert({
         therapist_id: originalBooking.therapist_id,
@@ -175,7 +164,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update original booking to mark as transferred
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('bookings')
       .update({
         status: 'cancelled',
@@ -218,7 +207,7 @@ export async function POST(request: NextRequest) {
       })
 
       // Save Google event ID to new booking
-      await supabase
+      await supabaseAdmin
         .from('bookings')
         .update({ google_event_id: googleEventId })
         .eq('id', newBooking.id)

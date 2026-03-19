@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { getAuthenticatedUserId } from '@/lib/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 // PayPal API base URLs
 const PAYPAL_BASE_URLS = {
@@ -36,7 +31,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer la réservation
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await supabaseAdmin
       .from('bookings')
       .select('therapist_id, paypal_capture_id, payment_status, refund_status')
       .eq('id', booking_id)
@@ -74,7 +69,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Récupérer la configuration PayPal
-    const { data: therapist, error: therapistError } = await supabase
+    const { data: therapist, error: therapistError } = await supabaseAdmin
       .from('therapists')
       .select('paypal_client_id, paypal_client_secret, paypal_environment')
       .eq('id', therapistId)
@@ -156,7 +151,7 @@ export async function POST(request: NextRequest) {
     const refundData = await refundResponse.json()
 
     // Mettre à jour la réservation
-    await supabase
+    await supabaseAdmin
       .from('bookings')
       .update({
         refund_status: 'processed',

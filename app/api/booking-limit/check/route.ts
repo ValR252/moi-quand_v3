@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { addMonths, startOfDay, parseISO } from 'date-fns'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 /**
  * GET /api/booking-limit/check
@@ -26,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Récupérer la limite de réservation du thérapeute
-    const { data: therapist, error } = await supabase
+    const { data: therapist, error } = await supabaseAdmin
       .from('therapists')
       .select('booking_limit_months')
       .eq('id', therapistId)

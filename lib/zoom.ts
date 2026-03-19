@@ -3,12 +3,7 @@
  * Backend Engineer: Type-safe Zoom integration for video meetings
  */
 
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin as supabase } from '@/lib/supabase-server'
 
 // Zoom OAuth endpoints
 const ZOOM_OAUTH_URL = 'https://zoom.us/oauth/authorize'

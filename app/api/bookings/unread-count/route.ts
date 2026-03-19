@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { supabaseAdmin } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest) {
     }
 
     // Count bookings where viewed_at is NULL
-    const { count, error } = await supabase
+    const { count, error } = await supabaseAdmin
       .from('bookings')
       .select('*', { count: 'exact', head: true })
       .eq('therapist_id', user.id)

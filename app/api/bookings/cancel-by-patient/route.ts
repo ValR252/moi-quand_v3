@@ -4,20 +4,9 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { deleteCalendarEvent } from '@/lib/google-calendar'
 import { sendCancellationEmailToPatient, sendCancellationEmailToTherapist } from '@/lib/email'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-)
 
 interface CancelByPatientRequest {
   token: string
@@ -41,7 +30,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Get booking with related data
-    const { data: booking, error: bookingError } = await supabase
+    const { data: booking, error: bookingError } = await supabaseAdmin
       .from('bookings')
       .select(`
         *,
@@ -128,7 +117,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Update booking status (CANCEL)
-    const { error: updateError } = await supabase
+    const { error: updateError } = await supabaseAdmin
       .from('bookings')
       .update({
         status: 'cancelled',

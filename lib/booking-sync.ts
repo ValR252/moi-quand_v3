@@ -5,12 +5,7 @@ import {
   deleteCalendarEvent,
   hasGoogleCalendarConnected
 } from './google-calendar'
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+import { supabaseAdmin as supabase } from '@/lib/supabase-server'
 
 // Auto-sync a booking to Google Calendar after creation
 export async function autoSyncBooking(bookingId: string) {

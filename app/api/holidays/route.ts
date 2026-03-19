@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-server'
 import { getAuthenticatedUserId } from '@/lib/auth'
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
 
 /**
  * GET /api/holidays
@@ -19,7 +14,7 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { data: holidays, error } = await supabase
+    const { data: holidays, error } = await supabaseAdmin
       .from('holidays')
       .select('*')
       .eq('therapist_id', therapistId)
@@ -59,7 +54,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { data: holiday, error } = await supabase
+    const { data: holiday, error } = await supabaseAdmin
       .from('holidays')
       .insert({
         therapist_id: therapistId,
