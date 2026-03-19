@@ -8,6 +8,7 @@
  *   </DashboardLayout>
  *
  * Phase 1+2: Design Review - Navigation mobile + Améliorations UX
+ * CORRECTION: Hamburger menu supprimé sur mobile - uniquement BottomNav
  */
 
 'use client'
@@ -43,7 +44,6 @@ const navItems: NavItem[] = [
 
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const [newBookingsCount, setNewBookingsCount] = useState(0)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
   const pageTitle = usePageTitle(pathname)
@@ -69,50 +69,24 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
     return () => clearInterval(interval)
   }, [])
 
-  // Close sidebar when route changes
-  useEffect(() => {
-    setSidebarOpen(false)
-  }, [pathname])
-
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
-      {/* Sidebar - Desktop only (hidden on mobile via CSS) */}
+      {/* Sidebar - DESKTOP UNIQUEMENT - jamais sur mobile */}
       <aside
-        className={`fixed top-0 left-0 z-50 h-full w-64
+        className="fixed top-0 left-0 z-50 h-full w-64
           bg-white dark:bg-gray-800
           border-r border-gray-200 dark:border-gray-700
-          transform transition-transform duration-300 ease-in-out
-          lg:translate-x-0
-          ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-        `}
+          hidden lg:block
+        "
       >
         {/* Logo */}
-        <div className="h-16 flex items-center justify-between px-6 border-b border-gray-200 dark:border-gray-700">
+        <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-gray-700">
           <Link
             href="/dashboard"
             className="text-xl font-bold text-brand-600 dark:text-brand-400"
           >
             moi-quand
           </Link>
-
-          {/* Close button (mobile) */}
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-            aria-label="Fermer le menu"
-          >
-            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         {/* Navigation */}
@@ -160,12 +134,13 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
 
       {/* Main content */}
       <div className="lg:pl-64">
-        {/* Mobile Header - sans menu hamburger, sans notifications */}
+        {/* Mobile Header - SANS hamburger, SANS notifications (juste theme toggle) */}
         <MobileHeader 
           title={pageTitle}
+          showBack={false}
           rightAction={
             <div className="flex items-center gap-2">
-              {/* Theme Toggle uniquement */}
+              {/* Theme Toggle uniquement - pas de notification ici */}
               <ThemeToggle />
             </div>
           }
@@ -179,12 +154,12 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
               {navItems.find((item) => item.href === pathname)?.label || 'Dashboard'}
             </h1>
 
-            {/* Right section (notifications, profile, etc.) */}
+            {/* Right section (notifications sur desktop uniquement) */}
             <div className="flex items-center gap-2">
               {/* Theme Toggle */}
               <ThemeToggle />
 
-              {/* Notification bell */}
+              {/* Notification bell - DESKTOP UNIQUEMENT */}
               <button
                 onClick={() => router.push('/dashboard/notifications')}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative transition-all hover:scale-105 active:scale-95"
