@@ -52,7 +52,7 @@ export default function NotificationsPage() {
         .filter((b: Booking) => b.status === "pending" || !b.viewed_at)
         .map((booking: Booking) => ({
           id: booking.id,
-          type: booking.status === "pending" ? "booking" : "payment",
+          type: (booking.status === "pending" ? "booking" : "payment") as "booking" | "payment",
           title:
             booking.status === "pending"
               ? "Nouvelle réservation"
