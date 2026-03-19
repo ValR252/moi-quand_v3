@@ -36,8 +36,6 @@ export default function ProfilePage() {
     booking_enabled: true,
     auto_confirm: false,
     timezone: 'Europe/Zurich',
-    // Booking limit moved to Availability page
-    booking_limit_months: 2,
     // PayPal configuration
     paypal_enabled: false,
     paypal_client_id: '',
@@ -98,8 +96,6 @@ export default function ProfilePage() {
           booking_enabled: data.therapist.booking_enabled ?? true,
           auto_confirm: data.therapist.auto_confirm ?? false,
           timezone: data.therapist.timezone || 'Europe/Zurich',
-          // Booking limit moved to Availability page
-          booking_limit_months: data.therapist.booking_limit_months ?? 2,
           // PayPal configuration
           paypal_enabled: data.therapist.paypal_enabled ?? false,
           paypal_client_id: data.therapist.paypal_client_id || '',
