@@ -163,6 +163,93 @@ function removeConflictingSlots(
 }
 
 /**
+ * BATCH: Get unavailable dates for a date range
+ * Returns a set of dates (YYYY-MM-DD) that have zero availability.
+ * Uses schedule + holidays to quickly identify closed days without
+ * running full slot calculation for each day.
+ *
+ * @param therapistId - The therapist's user ID
+ * @param startDate - Start date in YYYY-MM-DD format
+ * @param endDate - End date in YYYY-MM-DD format
+ * @param sessionDuration - Session duration in minutes (default: 60)
+ * @returns Object mapping date strings to slot counts
+ */
+export async function getDateAvailabilityBatch(
+  therapistId: string,
+  startDate: string,
+  endDate: string,
+  sessionDuration: number = 60
+): Promise<Record<string, number>> {
+  // 1. Fetch all schedules for this therapist (all days at once)
+  const { data: allSchedules } = await supabase
+    .from('schedules')
+    .select('day_of_week, start_time, end_time, is_available')
+    .eq('therapist_id', therapistId)
+    .eq('is_available', true)
+
+  // Build a set of working days (0-6)
+  const workingDays = new Set((allSchedules || []).map(s => s.day_of_week))
+
+  // 2. Fetch all holidays in range
+  const { data: holidays } = await supabase
+    .from('holidays')
+    .select('start_date, end_date')
+    .eq('therapist_id', therapistId)
+    .lte('start_date', endDate)
+    .gte('end_date', startDate)
+
+  // 3. Fetch notice hours
+  const noticeHours = await getTherapistNoticeHours(therapistId)
+  const now = new Date()
+  const earliestAllowed = new Date(now.getTime() + noticeHours * 60 * 60 * 1000)
+
+  // 4. Iterate through each date in range
+  const result: Record<string, number> = {}
+  const [startY, startM, startD] = startDate.split('-').map(Number)
+  const [endY, endM, endD] = endDate.split('-').map(Number)
+  const start = new Date(startY, startM - 1, startD)
+  const end = new Date(endY, endM - 1, endD)
+
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const dayOfWeek = d.getDay()
+
+    // Quick check 1: not a working day
+    if (!workingDays.has(dayOfWeek)) {
+      result[dateStr] = 0
+      continue
+    }
+
+    // Quick check 2: is a holiday
+    const isHol = (holidays || []).some(h => dateStr >= h.start_date && dateStr <= h.end_date)
+    if (isHol) {
+      result[dateStr] = 0
+      continue
+    }
+
+    // Quick check 3: entire day is before notice period
+    // Get the schedule for this day to find the last possible slot
+    const daySchedules = (allSchedules || []).filter(s => s.day_of_week === dayOfWeek)
+    const latestEnd = daySchedules.reduce((max, s) => {
+      const [h, m] = s.end_time.split(':').map(Number)
+      const t = new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m)
+      return t > max ? t : max
+    }, new Date(0))
+
+    if (latestEnd <= earliestAllowed) {
+      result[dateStr] = 0
+      continue
+    }
+
+    // Day potentially has slots — mark as available (estimate)
+    // We use -1 to mean "has schedule, needs detailed check"
+    result[dateStr] = -1
+  }
+
+  return result
+}
+
+/**
  * Get therapist's schedule for a specific day of week
  *
  * @param therapistId - The therapist's user ID

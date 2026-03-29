@@ -45,11 +45,22 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
   const [paypalLoading, setPaypalLoading] = useState(false)
   const [bookingId, setBookingId] = useState<string | null>(null)
 
+  // Date availability cache: date string -> 0 (unavailable) | -1 (potentially available)
+  const [dateAvailability, setDateAvailability] = useState<Record<string, number>>({})
+  const [loadingAvailability, setLoadingAvailability] = useState(false)
+
   useEffect(() => {
     const detected = detectUserTimezone()
     setPatientTimezone(detected)
     loadTherapistData()
   }, [id])
+
+  // Fetch batch date availability when session is selected
+  useEffect(() => {
+    if (selectedSession && therapist && !isDemoMode) {
+      fetchDateAvailability()
+    }
+  }, [selectedSession, therapist, isDemoMode])
 
   useEffect(() => {
     if (selectedDate && selectedSession && therapist && !isDemoMode) {
@@ -107,6 +118,28 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
       setSessions(MOCK_SESSIONS as any)
       setLoading(false)
     }
+  }
+
+  async function fetchDateAvailability() {
+    if (!therapist || !selectedSession) return
+
+    setLoadingAvailability(true)
+    try {
+      const startDate = format(new Date(), 'yyyy-MM-dd')
+      const endDate = format(addMonths(new Date(), bookingLimit), 'yyyy-MM-dd')
+
+      const response = await fetch(
+        `/api/availability/batch?therapistId=${therapist.id}&start=${startDate}&end=${endDate}&duration=${selectedSession.duration}`
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        setDateAvailability(data.availability || {})
+      }
+    } catch (error) {
+      console.error('Error fetching date availability:', error)
+    }
+    setLoadingAvailability(false)
   }
 
   async function fetchAvailableSlots() {
@@ -462,6 +495,14 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                 )}
               </div>
               
+              {/* Loading indicator for availability check */}
+              {loadingAvailability && (
+                <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 mb-2">
+                  <div className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-indigo-600 border-r-transparent"></div>
+                  Vérification des disponibilités...
+                </div>
+              )}
+
               {/* Feature 1: Show limited dates - Grouped by month with headers */}
               <div className="space-y-6">
                 {(() => {
@@ -511,27 +552,36 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                           {dates.map((date) => {
                             const isSelected = selectedDate?.toDateString() === date.toDateString()
                             const isPast = date < startOfDay(today)
-                            
+                            const dateStr = format(date, 'yyyy-MM-dd')
+                            const availabilityStatus = dateAvailability[dateStr]
+                            // 0 = confirmed no availability, undefined = not loaded yet, -1 = potentially available
+                            const isUnavailable = !isDemoMode && availabilityStatus === 0
+                            const isDisabled = isPast || isUnavailable
+
                             return (
                               <button
                                 key={date.toISOString()}
                                 type="button"
-                                onClick={() => setSelectedDate(date)}
-                                disabled={isPast}
-                                className={`p-4 rounded-xl border-2 transition-all hover:scale-105 active:scale-95 ${
+                                onClick={() => !isDisabled && setSelectedDate(date)}
+                                disabled={isDisabled}
+                                className={`p-4 rounded-xl border-2 transition-all ${
+                                  isDisabled
+                                    ? ''
+                                    : 'hover:scale-105 active:scale-95'
+                                } ${
                                   isSelected
                                     ? 'border-indigo-600 bg-indigo-50 dark:bg-indigo-950 shadow-lg'
-                                    : isPast
-                                      ? 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 opacity-50 cursor-not-allowed'
+                                    : isDisabled
+                                      ? 'border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50 opacity-40 cursor-not-allowed'
                                       : isCurrentMonth
                                         ? 'border-indigo-200 dark:border-indigo-800 bg-white dark:bg-gray-800 hover:border-indigo-400'
                                         : 'border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-indigo-300'
                                 }`}
                               >
                                 <div className={`text-xs mb-1 ${
-                                  isSelected 
-                                    ? 'text-indigo-600 dark:text-indigo-400' 
-                                    : isPast 
+                                  isSelected
+                                    ? 'text-indigo-600 dark:text-indigo-400'
+                                    : isDisabled
                                       ? 'text-gray-400 dark:text-gray-600'
                                       : isCurrentMonth
                                         ? 'text-indigo-500 dark:text-indigo-400 font-medium'
@@ -540,10 +590,10 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                                   {format(date, 'EEE', { locale: fr })}
                                 </div>
                                 <div className={`text-2xl font-bold ${
-                                  isSelected 
-                                    ? 'text-indigo-700 dark:text-indigo-300' 
-                                    : isPast 
-                                      ? 'text-gray-400 dark:text-gray-600'
+                                  isSelected
+                                    ? 'text-indigo-700 dark:text-indigo-300'
+                                    : isDisabled
+                                      ? 'text-gray-400 dark:text-gray-600 line-through'
                                       : isCurrentMonth
                                         ? 'text-gray-900 dark:text-white'
                                         : 'text-gray-700 dark:text-gray-300'
@@ -551,9 +601,9 @@ export default function BookingPage({ params }: { params: Promise<{ id: string }
                                   {format(date, 'd')}
                                 </div>
                                 <div className={`text-xs ${
-                                  isSelected 
-                                    ? 'text-indigo-500 dark:text-indigo-400' 
-                                    : isPast 
+                                  isSelected
+                                    ? 'text-indigo-500 dark:text-indigo-400'
+                                    : isDisabled
                                       ? 'text-gray-300 dark:text-gray-700'
                                       : 'text-gray-400 dark:text-gray-500'
                                 }`}>
