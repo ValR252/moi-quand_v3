@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
 
     const sessionIsOnline = is_online || sessionData?.is_online || false
 
-    // Prepare booking data
+    // Prepare booking data (only include columns that exist in the DB)
     const bookingData: any = {
       therapist_id,
       session_id,
@@ -67,15 +67,14 @@ export async function POST(request: NextRequest) {
       cancellation_token: cancellationToken,
       patient_timezone: patient_timezone || null,
       therapist_timezone: therapistTimezone,
-      is_online: sessionIsOnline,
     }
 
     // If online session and Zoom is connected, create Zoom meeting
     let zoomMeeting: { id: string; join_url: string; start_url: string; password?: string } | null = null
-    
+
     if (sessionIsOnline) {
       const zoomConnected = await hasZoomConnected(therapist_id)
-      
+
       if (zoomConnected) {
         try {
           // Create Zoom meeting
@@ -86,22 +85,16 @@ export async function POST(request: NextRequest) {
             duration: sessionData?.duration || 60,
             timezone: therapistTimezone,
           })
-          
+
           zoomMeeting = {
             id: meeting.id.toString(),
             join_url: meeting.join_url,
             start_url: meeting.start_url,
             password: meeting.password,
           }
-          
-          // Add Zoom data to booking
-          bookingData.zoom_meeting_id = zoomMeeting.id
-          bookingData.zoom_join_url = zoomMeeting.join_url
-          bookingData.zoom_start_url = zoomMeeting.start_url
         } catch (zoomError) {
           console.error('Error creating Zoom meeting:', zoomError)
           // Don't fail booking creation if Zoom fails
-          // Booking will be created without Zoom link
         }
       }
     }
