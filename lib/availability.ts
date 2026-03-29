@@ -44,7 +44,10 @@ export async function getAvailableSlots(
   }
 
   // 2. Get schedule for this day of week
-  const dayOfWeek = new Date(date).getDay() // 0=Sunday, 1=Monday, etc.
+  // Parse date parts manually to avoid UTC timezone shift
+  // new Date('YYYY-MM-DD') creates UTC midnight, getDay() could return wrong day
+  const [year, month, day] = date.split('-').map(Number)
+  const dayOfWeek = new Date(year, month - 1, day).getDay() // 0=Sunday, 1=Monday, etc.
   const scheduleRanges = await getScheduleForDay(therapistId, dayOfWeek)
 
   if (scheduleRanges.length === 0) {
@@ -95,7 +98,8 @@ export async function getAvailableSlots(
   const earliestAllowed = new Date(now.getTime() + noticeHours * 60 * 60 * 1000)
 
   availableSlots = availableSlots.filter(slot => {
-    const slotDateTime = new Date(`${date}T${slot}`)
+    // Use local date parsing to avoid UTC shift
+    const slotDateTime = new Date(year, month - 1, day, ...slot.split(':').map(Number) as [number, number])
     return slotDateTime >= earliestAllowed
   })
 

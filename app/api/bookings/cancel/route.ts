@@ -19,21 +19,11 @@ interface CancelBookingRequest {
  */
 export async function POST(request: NextRequest) {
   try {
-    // Get therapist ID from auth
-    const authHeader = request.headers.get('cookie')
-    if (!authHeader) {
-      return NextResponse.json(
-        { error: 'Non authentifié' },
-        { status: 401 }
-      )
-    }
+    // Get therapist ID from auth (using proper SSR auth helper)
+    const { getAuthenticatedUserId } = await import('@/lib/auth')
+    const therapistId = await getAuthenticatedUserId()
 
-    // Get session from cookie
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(
-      authHeader.split('sb-access-token=')[1]?.split(';')[0]
-    )
-
-    if (authError || !user) {
+    if (!therapistId) {
       return NextResponse.json(
         { error: 'Non authentifié' },
         { status: 401 }
@@ -50,19 +40,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get therapist by email
-    const { data: therapist, error: therapistError } = await supabaseAdmin
-      .from('therapists')
-      .select('id')
-      .eq('email', user.email)
-      .single()
-
-    if (therapistError || !therapist) {
-      return NextResponse.json(
-        { error: 'Thérapeute non trouvé' },
-        { status: 404 }
-      )
-    }
+    const therapist = { id: therapistId }
 
     // Get booking with session and therapist details
     const { data: booking, error: bookingError } = await supabaseAdmin
@@ -148,7 +126,7 @@ export async function POST(request: NextRequest) {
 
       // Email to therapist
       await sendCancellationEmailToTherapist({
-        to: therapistData?.email || user.email || '',
+        to: therapistData?.email || booking.email || '',
         therapistName: therapistData?.name || 'Thérapeute',
         patientName: `${booking.first_name} ${booking.last_name}`,
         date: booking.date,

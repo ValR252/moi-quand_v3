@@ -160,6 +160,10 @@ export async function updateCalendarEvent(
   },
   timezone: string = 'Europe/Zurich'
 ) {
+  if (!updates.date || !updates.time) {
+    throw new Error('date and time are required for calendar event update')
+  }
+
   const calendar = await getCalendarClient(therapistId)
 
   const startDateTime = new Date(`${updates.date}T${updates.time}`)

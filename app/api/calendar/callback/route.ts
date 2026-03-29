@@ -41,7 +41,8 @@ export async function GET(request: NextRequest) {
     // Redirect back to profile page with success message
     return NextResponse.redirect(
       new URL('/dashboard/profile?calendar_success=true', request.url)
-    )  } catch (error) {
+    )
+  } catch (error) {
     console.error('Error in calendar callback:', error)
     return NextResponse.redirect(
       new URL('/dashboard?calendar_error=unknown', request.url)

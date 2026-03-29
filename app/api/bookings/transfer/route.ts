@@ -108,21 +108,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Check if new slot is available (call availability API)
-    const availabilityRes = await fetch(
-      `${process.env.NEXT_PUBLIC_APP_URL}/api/availability/${therapist.id}?date=${body.new_date}&duration=${session.duration}`,
-      { method: 'GET' }
-    )
-
-    if (!availabilityRes.ok) {
-      return NextResponse.json(
-        { error: 'Impossible de vérifier la disponibilité' },
-        { status: 500 }
-      )
-    }
-
-    const availabilityData = await availabilityRes.json()
-    const isSlotAvailable = availabilityData.availableSlots?.includes(body.new_time)
+    // Check if new slot is available (direct function call instead of self-fetch)
+    const { getAvailableSlots } = await import('@/lib/availability')
+    const availableSlots = await getAvailableSlots(therapist.id, body.new_date, session.duration)
+    const isSlotAvailable = availableSlots.includes(body.new_time)
 
     if (!isSlotAvailable) {
       return NextResponse.json(
